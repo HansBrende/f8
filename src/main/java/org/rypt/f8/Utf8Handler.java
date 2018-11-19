@@ -1,5 +1,10 @@
 package org.rypt.f8;
 
+/**
+ * Base interface for handling a UTF-8 encoded byte stream
+ *
+ * @author Hans Brende (hansbrende@apache.org)
+ */
 public interface Utf8Handler {
     /**
      * Called when a valid unicode code point is encountered

@@ -1,5 +1,10 @@
 package org.rypt.f8;
 
+/**
+ * The core UTF-8 state machine.
+ *
+ * @author Hans Brende (hansbrende@apache.org)
+ */
 public class Utf8 {
 
     private Utf8() { throw new AssertionError(); }
@@ -56,7 +61,7 @@ public class Utf8 {
     }
 
     /**
-     * Returns the next UTF-8 state state given a previous state, a next byte, and a code point handler.
+     * Returns the next UTF-8 state given a previous state, a next byte, and a code point handler.
      * This function may call {@link #nextState(int, byte)} twice if the first invocation
      * returns an error state, in which case only the second state will be returned from this method.
      * @param s the previous UTF-8 state returned from this function, or 0 for the initial state
@@ -92,7 +97,7 @@ public class Utf8 {
     }
 
     /**
-     * Tests if at least one more byte is needed to create a code point
+     * Tests if at least one more continuation byte is needed to create a code point
      * @param s the state to test
      * @return true if at least one more byte is needed to create a code point
      */

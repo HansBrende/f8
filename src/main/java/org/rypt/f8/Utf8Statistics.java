@@ -2,6 +2,11 @@ package org.rypt.f8;
 
 import java.io.OutputStream;
 
+/**
+ * An implementation of {@link Utf8Handler} that records statistics for valid and invalid UTF-8 byte sequences
+ *
+ * @author Hans Brende (hansbrende@apache.org)
+ */
 public class Utf8Statistics extends OutputStream implements Utf8Handler {
 
     private int state;

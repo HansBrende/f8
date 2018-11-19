@@ -1,5 +1,11 @@
 package org.rypt.f8;
 
+/**
+ * An implementation of {@link Utf8Handler} that records byte statistics and decodes a UTF-8 encoded
+ * byte stream into a string.
+ *
+ * @author Hans Brende (hansbrende@apache.org)
+ */
 public class Utf8StringBuilder extends Utf8Statistics implements CharSequence {
     private final StringBuilder sb;
 
