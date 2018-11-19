@@ -106,6 +106,7 @@ public class Utf8Statistics extends OutputStream implements Utf8Handler {
         }
     }
 
+    @Override
     public String toString() {
         return "state=0x" + Integer.toHexString(state)
                 + "; valid=" + numValid

@@ -50,6 +50,7 @@ public class Utf8StringBuilder extends Utf8Statistics implements CharSequence {
         return sb.subSequence(start, end);
     }
 
+    @Override
     public String toString() {
         return sb.toString();
     }
