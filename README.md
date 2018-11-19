@@ -1,5 +1,5 @@
-# f8
-A lightning-fast UTF-8 state machine for Java.
+# F8
+A super lightweight, lightning-fast UTF-8 state machine for Java.
 
 ## Use Cases
 
@@ -48,4 +48,17 @@ public static String decodeUtf8(InputStream is) throws IOException {
     stringBuilder.close();
     return stringBuilder.toString();
 }
+```
+
+
+## Maven
+
+Add the following dependency to your pom:
+
+```xml
+<dependency>
+  <groupId>org.rypt</groupId>
+  <artifactId>f8</artifactId>
+  <version>1.0</version>
+</dependency>
 ```
