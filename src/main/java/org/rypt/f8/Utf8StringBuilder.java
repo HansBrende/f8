@@ -36,6 +36,32 @@ public class Utf8StringBuilder extends Utf8Statistics implements CharSequence {
     }
 
     @Override
+    public void handleAscii(int ascii) {
+        super.handleAscii(ascii);
+        sb.append((char)ascii);
+    }
+
+    @Override
+    public void handle2ByteCodePoint(int b1, int b2) {
+        super.handle2ByteCodePoint(b1, b2);
+        sb.append((char)Utf8.codePoint(b1, b2));
+    }
+
+    @Override
+    public void handle3ByteCodePoint(int b1, int b2, int b3) {
+        super.handle3ByteCodePoint(b1, b2, b3);
+        sb.append((char)Utf8.codePoint(b1, b2, b3));
+    }
+
+    @Override
+    public void handle4ByteCodePoint(int b1, int b2, int b3, int b4) {
+        super.handle4ByteCodePoint(b1, b2, b3, b4);
+        int cp = Utf8.codePoint(b1, b2, b3, b4);
+        sb.append(Character.highSurrogate(cp));
+        sb.append(Character.lowSurrogate(cp));
+    }
+
+    @Override
     public int length() {
         return sb.length();
     }

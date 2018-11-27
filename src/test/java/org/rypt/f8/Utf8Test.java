@@ -15,25 +15,42 @@ public class Utf8Test {
 
     @Test
     public void testStates() {
-        Utf8StringBuilder sb = new Utf8StringBuilder();
         byte[] bytes = new byte[0];
         testStates(bytes);
-        testStrings(bytes, sb);
         for (int b0 = 0; b0 < 256; b0++) {
             bytes = new byte[]{(byte)b0};
             testStates(bytes);
-            testStrings(bytes, sb);
             for (int b1 = 0; b1 < 256; b1++) {
                 bytes = new byte[]{(byte)b0, (byte)b1};
                 testStates(bytes);
-                testStrings(bytes, sb);
                 for (int b2 = 0; b2 < 256; b2++) {
                     bytes = new byte[]{(byte)b0, (byte)b1, (byte)b2};
                     testStates(bytes);
-                    testStrings(bytes, sb);
                     for (int b = 0xf0; b < 0xf5; b++) {
                         bytes = new byte[]{(byte)b, (byte)b0, (byte)b1, (byte)b2};
                         testStates(bytes);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testStrings() {
+        Utf8StringBuilder sb = new Utf8StringBuilder();
+        byte[] bytes = new byte[0];
+        testStrings(bytes, sb);
+        for (int b0 = 0; b0 < 256; b0++) {
+            bytes = new byte[]{(byte)b0};
+            testStrings(bytes, sb);
+            for (int b1 = 0; b1 < 256; b1++) {
+                bytes = new byte[]{(byte)b0, (byte)b1};
+                testStrings(bytes, sb);
+                for (int b2 = 0; b2 < 256; b2++) {
+                    bytes = new byte[]{(byte)b0, (byte)b1, (byte)b2};
+                    testStrings(bytes, sb);
+                    for (int b = 0xf0; b < 0xf5; b++) {
+                        bytes = new byte[]{(byte)b, (byte)b0, (byte)b1, (byte)b2};
                         testStrings(bytes, sb);
                     }
                 }
@@ -41,10 +58,31 @@ public class Utf8Test {
         }
     }
 
+    @Test
+    public void testRandom() {
+        Utf8StringBuilder testSb = new Utf8StringBuilder();
+        for (int shift = 0; shift < 13; shift++) {
+            for (int test = 0; test < 1_000_000; test++) {
+                int codePointCount = (int) (Math.random() * 16 + 1);
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < codePointCount; i++) {
+                    sb.appendCodePoint((int) (Math.random() * (0x110000 >> shift)));
+                }
+                byte[] bytes = sb.toString().getBytes(UTF_8);
+                testStrings(bytes, testSb);
+                int a = (int) (Math.random() * bytes.length);
+                int b = (int) (Math.random() * bytes.length);
+                byte[] subbytes = new byte[Math.abs(b - a) + 1];
+                System.arraycopy(bytes, Math.min(a, b), subbytes, 0, subbytes.length);
+                testStrings(subbytes, testSb);
+            }
+        }
+    }
+
     private static boolean assertState(int state) {
         if (state >= 0) {
             assertTrue(Character.isValidCodePoint(state));
-            assertNotEquals(Character.SURROGATE, Character.getType(state));
+            assertTrue(state < Character.MIN_SURROGATE || state > Character.MAX_SURROGATE);
             assertFalse(Utf8.isIncompleteState(state));
             assertFalse(Utf8.isErrorState(state));
             for (int b = 0; b < 256; b++) {
@@ -140,7 +178,9 @@ public class Utf8Test {
         boolean validExpected = Arrays.equals(bytes, utf8.getBytes(UTF_8));
 
         sb.reset();
-        sb.write(bytes);
+        int cutLen = (int)(Math.random() * bytes.length);
+        sb.write(bytes, 0, cutLen);
+        sb.write(bytes, cutLen, bytes.length - cutLen);
         sb.close();
         String utf8Actual = sb.toString();
         boolean validActual = sb.countInvalid() == 0;
@@ -184,6 +224,27 @@ public class Utf8Test {
         }
 
         assertEquals(isValid, isValidTest);
+    }
+
+    @Test
+    public void testCodePointConstruction() {
+        for (int i = 0; i <= Character.MAX_CODE_POINT; i++) {
+            byte[] b = new String(Character.toChars(i)).getBytes(UTF_8);
+            if (b.length == 2) {
+                assertEquals(i, Utf8.codePoint(b[0], b[1]));
+            } else if (b.length == 3) {
+                assertEquals(i, Utf8.codePoint(b[0], b[1], b[2]));
+            } else if (b.length == 4) {
+                assertEquals(i, Utf8.codePoint(b[0], b[1], b[2], b[3]));
+            }
+        }
+    }
+
+    @Test
+    public void testInitialState() {
+        for (int b = 0; b < 256; b++) {
+            assertEquals(Utf8.nextState(0, (byte)b), Utf8.initialState((byte)b));
+        }
     }
 
 }

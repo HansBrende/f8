@@ -30,20 +30,12 @@ public class Utf8Statistics extends OutputStream implements Utf8Handler {
 
     @Override
     public void write(byte[] b, int off, int len) {
-        int state = this.state;
-        for (int i = off, to = off + len; i < to; i++) {
-            state = Utf8.nextState(state, b[i], this);
-        }
-        this.state = state;
+        state = Utf8.nextState(state, b, off, len, this);
     }
 
     @Override
-    public void write(byte[] bytes) {
-        int state = this.state;
-        for (byte b : bytes) {
-            state = Utf8.nextState(state, b, this);
-        }
-        this.state = state;
+    public void write(byte[] b) {
+        write(b, 0, b.length);
     }
 
     @Override
@@ -104,6 +96,26 @@ public class Utf8Statistics extends OutputStream implements Utf8Handler {
         } else {
             numAscii++;
         }
+    }
+
+    @Override
+    public void handleAscii(int ascii) {
+        numAscii++;
+    }
+
+    @Override
+    public void handle2ByteCodePoint(int b1, int b2) {
+        numValid++;
+    }
+
+    @Override
+    public void handle3ByteCodePoint(int b1, int b2, int b3) {
+        numValid++;
+    }
+
+    @Override
+    public void handle4ByteCodePoint(int b1, int b2, int b3, int b4) {
+        numValid++;
     }
 
     @Override
