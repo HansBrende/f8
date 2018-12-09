@@ -1,5 +1,8 @@
 package org.rypt.f8;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 /**
  * The core UTF-8 state machine.
  *
@@ -41,40 +44,8 @@ public class Utf8 {
 //
 //    }
 
-    private static final int[] state = {
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888, 0x08888888,
-            0x8c8cff80, 0x8c8cff80, 0x8c8cff80, 0x8c8cff80, 0x8c8cff80, 0x8c8cff80, 0x8c8cff80, 0x8c8cff80,
-            0x8c8cff80, 0x8c8cff80, 0x8c8cff80, 0x8c8cff80, 0x8c8cff80, 0x8c8cff80, 0x8c8cff80, 0x8c8cff80,
-            0x8cc8ff80, 0x8cc8ff80, 0x8cc8ff80, 0x8cc8ff80, 0x8cc8ff80, 0x8cc8ff80, 0x8cc8ff80, 0x8cc8ff80,
-            0x8cc8ff80, 0x8cc8ff80, 0x8cc8ff80, 0x8cc8ff80, 0x8cc8ff80, 0x8cc8ff80, 0x8cc8ff80, 0x8cc8ff80,
-            0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0,
-            0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0,
-            0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0,
-            0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0, 0x8cc8f8f0,
-            0x88888888, 0x88888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888,
-            0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888,
-            0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888,
-            0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888, 0xf8888888,
-            0xe8888888, 0xc8888888, 0xc8888888, 0xc8888888, 0xc8888888, 0xc8888888, 0xc8888888, 0xc8888888,
-            0xc8888888, 0xc8888888, 0xc8888888, 0xc8888888, 0xc8888888, 0xd8888888, 0xc8888888, 0xc8888888,
-            0xa8888888, 0x98888888, 0x98888888, 0x98888888, 0xb8888888, 0x88888888, 0x88888888, 0x88888888,
-            0x88888888, 0x88888888, 0x88888888, 0x88888888, 0x88888888, 0x88888888, 0x88888888, 0x88888888
-    };
+    private static final int SURROGATE_PREFIX = -1;
+    private static final int OTHER_ERROR = -2;
 
     /**
      * Returns the next UTF-8 state given a previous state and a next byte.
@@ -86,21 +57,39 @@ public class Utf8 {
      * @see Utf8#isErrorState(int)
      * @see Utf8#isIncompleteState(int)
      */
-    public static int nextState(int s, int b) {
-        return s << 6 & (s << 1 | s << 2 | s << 3) >> 31
-                | b & ~(b >> 1 & b >> 2 & b >> 3 & 0xfffffff0)
-                | state[b & 0xff] << (s >> 26 & 0x1c) & 0xf4000000;
+    public static int nextState(int s, byte b) {
+        int z = s + 2;
+        if ((z & (b + 64)) >= 0) {
+            if ((z | b & (b - (byte)0xc2 | ((byte)0xf4) - b)) >= 0) {
+                return b;
+            }
+            return OTHER_ERROR;
+        } else if (s >> 5 == -2) {
+            return codePoint(s, b);
+        } else if (s >= 0xfffff000) {
+            if ((s & 0xfb) == 0xf0 && ((s << 28) + 0x70 + b >> 30) != 0
+                    || s == (byte)0xe0 && b < (byte)0xa0) {
+                return OTHER_ERROR;
+            }
+            int c = s << 8 | b & 0xff;
+            return c >> 5 == 0xffffff6d ? SURROGATE_PREFIX : c;
+        } else if (s >> 12 == -2) {
+            return codePoint(s >> 8, (byte)s, b);
+        } else {
+            return codePoint(s >> 16, (byte)(s >> 8), (byte)s, b);
+        }
     }
 
-    /**
-     * Returns the next UTF-8 state given no previous initial state and a next byte.
-     * This method is semantically equivalent to: {@code nextState(0, b)}.
-     * @param b the next byte
-     * @return the next UTF-8 state
-     * @see Utf8#nextState(int, byte)
-     */
-    public static int initialState(byte b) {
-        return b & ~(b >> 1 & b >> 2 & b >> 3 & 0xfffffff0) | state[b & 0xff] & 0xf4000000;
+    private static <X extends Exception> void transferState(int s, int nextByte, Utf8ByteHandler<X> handler) throws X {
+        if (isIncompleteState(s)) { //missing continuation
+            if (s >= 0xffffffc0) {
+                handler.handleContinuationError(s, nextByte);
+            } else if (s >= 0xffffe000) {
+                handler.handleContinuationError(s >> 8, (byte)s, nextByte);
+            } else {
+                handler.handleContinuationError(s >> 16, (byte)(s >> 8), (byte)s, nextByte);
+            }
+        }
     }
 
     /**
@@ -112,36 +101,50 @@ public class Utf8 {
      * @param handler the handler to delegate all code point and error handling to
      * @return the next UTF-8 state
      */
-    public static int nextState(int s, byte b, Utf8Handler handler) {
-        int next = nextState(s, b);
-        if (next >= 0) {
-            handler.handleCodePoint(next);
-        } else if (isErrorState(next) &&
-                // Report an error only if this is an error state that doesn't correspond to a
-                // surrogate code point (as we have already reported an error in that case).
-                // This will ensure the number of '�' characters we print out will exactly
-                // match StandardCharsets.UTF_8's CharsetDecoder implementation.
-                !(isSurrogatePrefixErrorState(s) && b < (byte)0xC0)) {
-
-            handler.handleError();
-
-            //If previous state was incomplete and error doesn't correspond to a
-            // surrogate code point prefix, restart state machine at this byte
-            if (isIncompleteState(s) && !isSurrogatePrefixErrorState(next)) {
-                next = nextState(0, b);
-                if (next >= 0) {
-                    handler.handleCodePoint(next);
-                } else if (isErrorState(next)) {
-                    handler.handleError();
-                }
+    public static <X extends Exception> int nextState(int s, byte b, Utf8ByteHandler<X> handler) throws X {
+        if (((s + 2) & (b + 64)) >= 0) { //same as: s >= -2 || b >= (byte)0xc0
+            transferState(s, b, handler);
+            if (b >= 0) {
+                handler.handle1ByteCodePoint(b);
+                return 0;
+            } else if ((-63 - b & b + 11) < 0) { //same as: b >= 0xc2 && b <= 0xf4
+                return b;
+            } else if (isSurrogatePrefixErrorState(s) && b < (byte)0xc0) {
+                handler.handleIgnoredByte(b);
+                return 0;
+            } else {
+                handler.handlePrefixError(b);
+                return 0;
+            }
+        } else if (s >> 5 == -2) {
+            handler.handle2ByteCodePoint(s, b);
+            return 0;
+        } else if (s >> 12 == -2) {
+            handler.handle3ByteCodePoint(s >> 8, (byte)s, b);
+            return 0;
+        } else if (s >> 19 == -2) {
+            handler.handle4ByteCodePoint(s >> 16, (byte)(s >> 8), (byte)s, b);
+            return 0;
+        } else if ((s & 0xfb) == 0xf0 && ((s << 28) + 0x70 + b >> 30) != 0
+                || s == (byte)0xe0 && b < (byte)0xa0) {
+            handler.handleContinuationError(s, b); //missing continuation
+            handler.handlePrefixError(b); //invalid first byte
+            return 0;
+        } else {
+            int c = s << 8 | b & 0xff;
+            if (c >> 5 == 0xffffff6d) {
+                handler.handleContinuationError((byte)0xed, b);
+                handler.handleIgnoredByte(b);
+                return SURROGATE_PREFIX;
+            } else {
+                return c;
             }
         }
-        return next;
     }
 
-    public static int nextState(int state, byte[] b, int off, int len, Utf8Handler handler) {
+    public static <X extends Exception> int nextState(int state, byte[] b, int off, int len, Utf8ByteHandler<X> handler) throws X {
         final int to = off + len;
-        while (state < 0 && off < to) {
+        while ((state & (off - to)) < 0) {
             state = nextState(state, b[off++], handler);
         }
 
@@ -152,68 +155,96 @@ public class Utf8 {
         for (;;) {
             int b1 = 0;
             while (off < to && (b1 = b[off++]) >= 0) {
-                handler.handleAscii(b1);
+                handler.handle1ByteCodePoint(b1);
             }
             if (b1 >= 0) { //0xxxxxxx
-                return b1;
+                return 0;
             } else if ((b1 >> 5) == -2 && (b1 & 0x1e) != 0) {
                 if (off < to) { //110xxxxx 10xxxxxx
                     int b2 = b[off++];
                     if ((b2 & 0xc0) != 0x80) { //is not continuation
-                        handler.handleError();
+                        handler.handleContinuationError(b1, b2);
                         off--;
                     } else {
                         handler.handle2ByteCodePoint(b1, b2);
                     }
                 } else { //110xxxxx
-                    return initialState((byte)b1);
+                    return b1;
                 }
             } else if ((b1 >> 4) == -2) {
                 if (off + 1 < to) { //1110xxxx 10xxxxxx 10xxxxxx
                     int b2 = b[off++], b3;
-                    if (b1 == (byte)0xe0 && (b2 & 0xe0) == 0x80 || (b2 & 0xc0) != 0x80 || (b3 = b[off++]) > (byte)0xbf) {
-                        handler.handleError();
+                    if (b1 == (byte)0xe0 && (b2 & 0xe0) == 0x80
+                            || (b2 & 0xc0) != 0x80) {
+                        handler.handleContinuationError(b1, b2);
+                        off--;
+                    } else if ((b3 = b[off++]) > (byte)0xbf) {
+                        handler.handleContinuationError(b1, b2, b3);
                         off--;
                     } else if (b1 == (byte)0xed && (b2 & 0xe0) == 0xa0) { //surrogate
-                        handler.handleError();
+                        handler.handleContinuationError(b1, b2);
+                        handler.handleIgnoredByte(b2);
+                        handler.handleIgnoredByte(b3);
                     } else {
                         handler.handle3ByteCodePoint(b1, b2, b3);
                     }
                 } else {
-                    state = initialState((byte)b1);
                     if (off < to) {
-                        state = nextState(state, b[off], handler);
+                        b1 = nextState(b1, b[off], handler);
                     }
-                    return state;
+                    return b1;
                 }
             } else if ((b1 >> 3) == -2) {
                 if (off + 2 < to) { //11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
                     int b2 = b[off++], b3, b4;
-                    // Dark magic
-                    if ((b2 >> 6 ^ -2 | (b1 << 28) + 0x70 + b2 >> 30) != 0
-                            // if (b1 > (byte)0xf4
-                            //      || b2 > (byte)0xbf
-                            //      || b1 == (byte)0xf0 && b2 < (byte)0x90
-                            //      || b1 == (byte)0xf4 && b2 > (byte)0x8f
-                            || (b3 = b[off++]) > (byte)0xbf
-                            || (b4 = b[off++]) > (byte)0xbf) {
-                        handler.handleError();
+                    if ((b2 >> 6 ^ -2 | (b1 << 28) + 0x70 + b2 >> 30) != 0) {
+                        handler.handleContinuationError(b1, b2);
+                        off--;
+                    } else if ((b3 = b[off++]) > (byte)0xbf) {
+                        handler.handleContinuationError(b1, b2, b3);
+                        off--;
+                    } else if ((b4 = b[off++]) > (byte)0xbf) {
+                        handler.handleContinuationError(b1, b2, b3, b4);
                         off--;
                     } else {
                         handler.handle4ByteCodePoint(b1, b2, b3, b4);
                     }
                 } else if (b1 > (byte)0xf4) {
-                    handler.handleError();
+                    handler.handlePrefixError(b1);
                 } else {
-                    state = initialState((byte)b1);
                     while (off < to) {
-                        state = nextState(state, b[off++], handler);
+                        b1 = nextState(b1, b[off++], handler);
                     }
-                    return state;
+                    return b1;
                 }
             } else {
-                handler.handleError();
+                handler.handlePrefixError(b1);
             }
+        }
+    }
+
+    public static <X extends Exception> void transferFinalState(int s, Utf8ByteHandler<X> handler) throws X {
+        transferState(s, Utf8ByteHandler.END_OF_STREAM, handler);
+    }
+
+    private static final int BUFFER_SIZE = 8192;
+    public static <X extends Exception> void transfer(InputStream inputStream, Utf8ByteHandler<X> handler) throws IOException, X {
+        int state = 0;
+        byte[] bytes = new byte[BUFFER_SIZE];
+        int n;
+        while ((n = inputStream.read(bytes, 0, BUFFER_SIZE)) != -1) {
+            state = nextState(state, bytes, 0, n, handler);
+        }
+        transferFinalState(state, handler);
+    }
+
+
+    public static boolean isValid(InputStream is, boolean allowTruncatedStream) throws IOException {
+        try {
+            transfer(is, Utf8Validator.allowingTruncation(allowTruncatedStream));
+            return true;
+        } catch (Utf8Error e) {
+            return false;
         }
     }
 
@@ -259,7 +290,7 @@ public class Utf8 {
      * @return true if at least one more byte is needed to create a code point
      */
     public static boolean isIncompleteState(int s) {
-        return (s << 1 | s << 2 | s << 3) >> 31 == -1;
+        return s < OTHER_ERROR;
     }
 
     /**
@@ -268,7 +299,7 @@ public class Utf8 {
      * @return true if this state corresponds to an invalid UTF-8 byte sequence.
      */
     public static boolean isErrorState(int s) {
-        return (s & 0xf0000000) == 0x80000000;
+        return s >> 1 == -1;
     }
 
     /**
@@ -278,7 +309,123 @@ public class Utf8 {
      * @return true if this state corresponds to an invalid surrogate code point prefix
      */
     public static boolean isSurrogatePrefixErrorState(int s) {
-        return (s & 0xffffffe0) == 0x84000360;
+        return s == SURROGATE_PREFIX;
     }
 
+    @SuppressWarnings("unchecked")
+    public static <X extends Exception> Utf8ByteHandler<X> cast(Utf8ByteHandler<? extends Never> neverThrows) {
+        return (Utf8ByteHandler<X>)neverThrows;
+    }
+
+    public static <X extends Exception> Utf8ByteHandler<X> compose(Utf8ByteHandler<? extends X> h1, Utf8ByteHandler<? extends X> h2) {
+        return new Utf8ByteHandler<X>() {
+            @Override
+            public void handle1ByteCodePoint(int b1) throws X {
+                h1.handle1ByteCodePoint(b1);
+                h2.handle1ByteCodePoint(b1);
+            }
+
+            @Override
+            public void handle2ByteCodePoint(int b1, int b2) throws X {
+                h1.handle2ByteCodePoint(b1, b2);
+                h2.handle2ByteCodePoint(b1, b2);
+            }
+
+            @Override
+            public void handle3ByteCodePoint(int b1, int b2, int b3) throws X {
+                h1.handle3ByteCodePoint(b1, b2, b3);
+                h2.handle3ByteCodePoint(b1, b2, b3);
+            }
+
+            @Override
+            public void handle4ByteCodePoint(int b1, int b2, int b3, int b4) throws X {
+                h1.handle4ByteCodePoint(b1, b2, b3, b4);
+                h2.handle4ByteCodePoint(b1, b2, b3, b4);
+            }
+
+            @Override
+            public void handlePrefixError(int err) throws X {
+                h1.handlePrefixError(err);
+                h2.handlePrefixError(err);
+            }
+
+            @Override
+            public void handleContinuationError(int b1, int err) throws X {
+                h1.handleContinuationError(b1, err);
+                h2.handleContinuationError(b1, err);
+            }
+
+            @Override
+            public void handleContinuationError(int b1, int b2, int err) throws X {
+                h1.handleContinuationError(b1, b2, err);
+                h2.handleContinuationError(b1, b2, err);
+            }
+
+            @Override
+            public void handleContinuationError(int b1, int b2, int b3, int err) throws X {
+                h1.handleContinuationError(b1, b2, b3, err);
+                h2.handleContinuationError(b1, b2, b3, err);
+            }
+
+            @Override
+            public void handleIgnoredByte(int b) throws X {
+                h1.handleIgnoredByte(b);
+                h2.handleIgnoredByte(b);
+            }
+        };
+    }
+
+    private static class Utf8Validator implements Utf8ByteHandler<Utf8Error> {
+
+        private Utf8Validator() {
+        }
+
+        void continuationError(int err) throws Utf8Error {
+            Utf8Error.fail();
+        }
+
+        private static final Utf8Validator strict = new Utf8Validator();
+
+        private static final Utf8Validator allowingTruncation = new Utf8Validator() {
+            @Override
+            void continuationError(int err) throws Utf8Error {
+                if (err != END_OF_STREAM) {
+                    Utf8Error.fail();
+                }
+            }
+        };
+
+        public static Utf8Validator allowingTruncation(boolean lenient) {
+            return lenient ? allowingTruncation : strict;
+        }
+
+        @Override
+        public void handle1ByteCodePoint(int b1) {
+        }
+        @Override
+        public void handle2ByteCodePoint(int b1, int b2) {
+        }
+        @Override
+        public void handle3ByteCodePoint(int b1, int b2, int b3) {
+        }
+        @Override
+        public void handle4ByteCodePoint(int b1, int b2, int b3, int b4) {
+        }
+        @Override
+        public void handleContinuationError(int b1, int err) throws Utf8Error {
+            continuationError(err);
+        }
+        @Override
+        public void handleContinuationError(int b1, int b2, int err) throws Utf8Error {
+            continuationError(err);
+        }
+        @Override
+        public void handleContinuationError(int b1, int b2, int b3, int err) throws Utf8Error {
+            continuationError(err);
+        }
+        @Override
+        public void handlePrefixError(int err) throws Utf8Error {
+            Utf8Error.fail();
+        }
+    }
 }

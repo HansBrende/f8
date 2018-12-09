@@ -7,7 +7,7 @@ import java.io.OutputStream;
  *
  * @author Hans Brende (hansbrende@apache.org)
  */
-public class Utf8Statistics extends OutputStream implements Utf8Handler {
+public class Utf8Statistics extends OutputStream implements Utf8Handler<Never> {
 
     private int state;
     private long numValid;
@@ -39,12 +39,33 @@ public class Utf8Statistics extends OutputStream implements Utf8Handler {
     }
 
     @Override
-    public void close() {
-        if (Utf8.isIncompleteState(state)) {
+    public void handleContinuationError(int b1, int b2, int b3, int nextByte) {
+        if (nextByte == END_OF_STREAM) {
             numTruncated++;
-            handleError();
-            state = 0;
         }
+        handleError();
+    }
+
+    @Override
+    public void handleContinuationError(int b1, int b2, int nextByte) {
+        if (nextByte == END_OF_STREAM) {
+            numTruncated++;
+        }
+        handleError();
+    }
+
+    @Override
+    public void handleContinuationError(int b1, int nextByte) {
+        if (nextByte == END_OF_STREAM) {
+            numTruncated++;
+        }
+        handleError();
+    }
+
+    @Override
+    public void close() {
+        Utf8.transferFinalState(state, this);
+        state = 0;
     }
 
     /**
@@ -99,7 +120,7 @@ public class Utf8Statistics extends OutputStream implements Utf8Handler {
     }
 
     @Override
-    public void handleAscii(int ascii) {
+    public void handle1ByteCodePoint(int ascii) {
         numAscii++;
     }
 

@@ -7,7 +7,7 @@ package org.rypt.f8;
  * @author Hans Brende (hansbrende@apache.org)
  */
 public class Utf8StringBuilder extends Utf8Statistics implements CharSequence {
-    private final StringBuilder sb;
+    protected final StringBuilder sb;
 
     public Utf8StringBuilder(StringBuilder sb) {
         this.sb = sb;
@@ -36,8 +36,8 @@ public class Utf8StringBuilder extends Utf8Statistics implements CharSequence {
     }
 
     @Override
-    public void handleAscii(int ascii) {
-        super.handleAscii(ascii);
+    public void handle1ByteCodePoint(int ascii) {
+        super.handle1ByteCodePoint(ascii);
         sb.append((char)ascii);
     }
 

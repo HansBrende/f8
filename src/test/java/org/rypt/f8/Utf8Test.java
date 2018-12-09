@@ -37,7 +37,7 @@ public class Utf8Test {
 
     @Test
     public void testStrings() {
-        Utf8StringBuilder sb = new Utf8StringBuilder();
+        TestStringBuilder sb = new TestStringBuilder();
         byte[] bytes = new byte[0];
         testStrings(bytes, sb);
         for (int b0 = 0; b0 < 256; b0++) {
@@ -60,7 +60,7 @@ public class Utf8Test {
 
     @Test
     public void testRandom() {
-        Utf8StringBuilder testSb = new Utf8StringBuilder();
+        TestStringBuilder testSb = new TestStringBuilder();
         for (int shift = 0; shift < 13; shift++) {
             for (int test = 0; test < 1_000_000; test++) {
                 int codePointCount = (int) (Math.random() * 16 + 1);
@@ -72,9 +72,7 @@ public class Utf8Test {
                 testStrings(bytes, testSb);
                 int a = (int) (Math.random() * bytes.length);
                 int b = (int) (Math.random() * bytes.length);
-                byte[] subbytes = new byte[Math.abs(b - a) + 1];
-                System.arraycopy(bytes, Math.min(a, b), subbytes, 0, subbytes.length);
-                testStrings(subbytes, testSb);
+                testStrings(Arrays.copyOfRange(bytes, Math.min(a, b), Math.max(a, b) + 1), testSb);
             }
         }
     }
@@ -173,11 +171,102 @@ public class Utf8Test {
         }
     }
 
-    private static void testStrings(byte[] bytes, Utf8StringBuilder sb) {
+    private static class TestStringBuilder extends Utf8StringBuilder {
+
+        private int index;
+        byte[] bytes;
+
+        public void setBytes(byte[] bytes) {
+            this.bytes = bytes;
+            this.index = 0;
+        }
+
+        private void assertByte(int b) {
+            assertEquals(bytes[index++], b);
+        }
+
+        @Override
+        public void close() {
+            super.close();
+            assertEquals(bytes.length, index);
+        }
+
+        @Override
+        public void handleCodePoint(int codePoint) {
+            super.handleCodePoint(codePoint);
+            throw new AssertionError();
+        }
+
+        @Override
+        public void handleIgnoredByte(int b1) {
+            super.handleIgnoredByte(b1);
+            assertByte(b1);
+        }
+
+        @Override
+        public void handlePrefixError(int b1) throws Never {
+            super.handlePrefixError(b1);
+            assertByte(b1);
+        }
+
+        @Override
+        public void handleContinuationError(int b1, int nextByte) throws Never {
+            super.handleContinuationError(b1, nextByte);
+            assertByte(b1);
+        }
+
+        @Override
+        public void handleContinuationError(int b1, int b2, int nextByte) throws Never {
+            super.handleContinuationError(b1, b2, nextByte);
+            assertByte(b1);
+            assertByte(b2);
+        }
+
+        @Override
+        public void handleContinuationError(int b1, int b2, int b3, int nextByte) throws Never {
+            super.handleContinuationError(b1, b2, b3, nextByte);
+            assertByte(b1);
+            assertByte(b2);
+            assertByte(b3);
+        }
+
+        @Override
+        public void handle1ByteCodePoint(int ascii) {
+            super.handle1ByteCodePoint(ascii);
+            assertByte(ascii);
+        }
+
+        @Override
+        public void handle2ByteCodePoint(int b1, int b2) {
+            super.handle2ByteCodePoint(b1, b2);
+            assertByte(b1);
+            assertByte(b2);
+        }
+
+        @Override
+        public void handle3ByteCodePoint(int b1, int b2, int b3) {
+            super.handle3ByteCodePoint(b1, b2, b3);
+            assertByte(b1);
+            assertByte(b2);
+            assertByte(b3);
+        }
+
+        @Override
+        public void handle4ByteCodePoint(int b1, int b2, int b3, int b4) {
+            super.handle4ByteCodePoint(b1, b2, b3, b4);
+            assertByte(b1);
+            assertByte(b2);
+            assertByte(b3);
+            assertByte(b4);
+        }
+    }
+
+    private static void testStrings(byte[] bytes, TestStringBuilder sb) {
         String utf8 = new String(bytes, UTF_8);
         boolean validExpected = Arrays.equals(bytes, utf8.getBytes(UTF_8));
 
         sb.reset();
+        sb.setBytes(bytes);
         int cutLen = (int)(Math.random() * bytes.length);
         sb.write(bytes, 0, cutLen);
         sb.write(bytes, cutLen, bytes.length - cutLen);
@@ -187,6 +276,54 @@ public class Utf8Test {
 
         assertEquals(validExpected, validActual);
         assertEquals(utf8, utf8Actual);
+
+        int state = 0;
+        Utf8StringBuilder sbNew = new Utf8StringBuilder();
+        for (byte b : bytes) {
+            state = Utf8.nextState(state, b, sbNew);
+        }
+        if (Utf8.isIncompleteState(state)) {
+            sbNew.handleError();
+        }
+
+        String utf82Actual = sbNew.toString();
+        boolean valid2Actual = sbNew.countInvalid() == 0;
+        assertEquals(validExpected, valid2Actual);
+        assertEquals(utf8, utf82Actual);
+    }
+
+    public static String toString(int[] a) {
+        if (a == null)
+            return "null";
+        int iMax = a.length - 1;
+        if (iMax == -1)
+            return "[]";
+
+        StringBuilder b = new StringBuilder();
+        b.append('[');
+        for (int i = 0; ; i++) {
+            b.append(String.format("%02X", a[i]));
+            if (i == iMax)
+                return b.append(']').toString();
+            b.append(", ");
+        }
+    }
+
+    public static String toString(byte[] a) {
+        if (a == null)
+            return "null";
+        int iMax = a.length - 1;
+        if (iMax == -1)
+            return "[]";
+
+        StringBuilder b = new StringBuilder();
+        b.append('[');
+        for (int i = 0; ; i++) {
+            b.append(String.format("%02X", a[i] & 0xff));
+            if (i == iMax)
+                return b.append(']').toString();
+            b.append(", ");
+        }
     }
 
     private static void testStates(byte[] bytes) {
@@ -237,13 +374,6 @@ public class Utf8Test {
             } else if (b.length == 4) {
                 assertEquals(i, Utf8.codePoint(b[0], b[1], b[2], b[3]));
             }
-        }
-    }
-
-    @Test
-    public void testInitialState() {
-        for (int b = 0; b < 256; b++) {
-            assertEquals(Utf8.nextState(0, (byte)b), Utf8.initialState((byte)b));
         }
     }
 

@@ -39,9 +39,7 @@ public class Utf8Benchmark {
 
     @Benchmark
     public boolean f8() throws IOException {
-        Utf8Statistics stats = copy(new TestInputStream(), new Utf8Statistics());
-
-        return stats.countInvalid() == 0;
+        return Utf8.isValid(new TestInputStream(), true);
     }
 
     @Benchmark
