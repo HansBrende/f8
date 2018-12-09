@@ -223,8 +223,13 @@ public class Utf8 {
         }
     }
 
-    public static <X extends Exception> void transferFinalState(int s, Utf8ByteHandler<X> handler) throws X {
-        transferState(s, Utf8ByteHandler.END_OF_STREAM, handler);
+    /**
+     * If the final state is incomplete, allows handler to handle final error state
+     * @param finalState the final state
+     * @param handler the handler
+     */
+    public static <X extends Exception> void finish(int finalState, Utf8ByteHandler<X> handler) throws X {
+        transferState(finalState, Utf8ByteHandler.END_OF_STREAM, handler);
     }
 
     private static final int BUFFER_SIZE = 8192;
@@ -235,13 +240,22 @@ public class Utf8 {
         while ((n = inputStream.read(bytes, 0, BUFFER_SIZE)) != -1) {
             state = nextState(state, bytes, 0, n, handler);
         }
-        transferFinalState(state, handler);
+        finish(state, handler);
     }
 
 
-    public static boolean isValid(InputStream is, boolean allowTruncatedStream) throws IOException {
+    public static boolean isFullyValid(InputStream is) throws IOException {
         try {
-            transfer(is, Utf8Validator.allowingTruncation(allowTruncatedStream));
+            transfer(is, Validator.strict);
+            return true;
+        } catch (Utf8Error e) {
+            return false;
+        }
+    }
+
+    public static boolean isValidUpToTruncation(InputStream is) throws IOException {
+        try {
+            transfer(is, Validator.allowingTruncation);
             return true;
         } catch (Utf8Error e) {
             return false;
@@ -312,81 +326,18 @@ public class Utf8 {
         return s == SURROGATE_PREFIX;
     }
 
-    @SuppressWarnings("unchecked")
-    public static <X extends Exception> Utf8ByteHandler<X> cast(Utf8ByteHandler<? extends Never> neverThrows) {
-        return (Utf8ByteHandler<X>)neverThrows;
-    }
+    private static class Validator implements Utf8ByteHandler<Utf8Error> {
 
-    public static <X extends Exception> Utf8ByteHandler<X> compose(Utf8ByteHandler<? extends X> h1, Utf8ByteHandler<? extends X> h2) {
-        return new Utf8ByteHandler<X>() {
-            @Override
-            public void handle1ByteCodePoint(int b1) throws X {
-                h1.handle1ByteCodePoint(b1);
-                h2.handle1ByteCodePoint(b1);
-            }
-
-            @Override
-            public void handle2ByteCodePoint(int b1, int b2) throws X {
-                h1.handle2ByteCodePoint(b1, b2);
-                h2.handle2ByteCodePoint(b1, b2);
-            }
-
-            @Override
-            public void handle3ByteCodePoint(int b1, int b2, int b3) throws X {
-                h1.handle3ByteCodePoint(b1, b2, b3);
-                h2.handle3ByteCodePoint(b1, b2, b3);
-            }
-
-            @Override
-            public void handle4ByteCodePoint(int b1, int b2, int b3, int b4) throws X {
-                h1.handle4ByteCodePoint(b1, b2, b3, b4);
-                h2.handle4ByteCodePoint(b1, b2, b3, b4);
-            }
-
-            @Override
-            public void handlePrefixError(int err) throws X {
-                h1.handlePrefixError(err);
-                h2.handlePrefixError(err);
-            }
-
-            @Override
-            public void handleContinuationError(int b1, int err) throws X {
-                h1.handleContinuationError(b1, err);
-                h2.handleContinuationError(b1, err);
-            }
-
-            @Override
-            public void handleContinuationError(int b1, int b2, int err) throws X {
-                h1.handleContinuationError(b1, b2, err);
-                h2.handleContinuationError(b1, b2, err);
-            }
-
-            @Override
-            public void handleContinuationError(int b1, int b2, int b3, int err) throws X {
-                h1.handleContinuationError(b1, b2, b3, err);
-                h2.handleContinuationError(b1, b2, b3, err);
-            }
-
-            @Override
-            public void handleIgnoredByte(int b) throws X {
-                h1.handleIgnoredByte(b);
-                h2.handleIgnoredByte(b);
-            }
-        };
-    }
-
-    private static class Utf8Validator implements Utf8ByteHandler<Utf8Error> {
-
-        private Utf8Validator() {
+        private Validator() {
         }
 
         void continuationError(int err) throws Utf8Error {
             Utf8Error.fail();
         }
 
-        private static final Utf8Validator strict = new Utf8Validator();
+        private static final Validator strict = new Validator();
 
-        private static final Utf8Validator allowingTruncation = new Utf8Validator() {
+        private static final Validator allowingTruncation = new Validator() {
             @Override
             void continuationError(int err) throws Utf8Error {
                 if (err != END_OF_STREAM) {
@@ -394,10 +345,6 @@ public class Utf8 {
                 }
             }
         };
-
-        public static Utf8Validator allowingTruncation(boolean lenient) {
-            return lenient ? allowingTruncation : strict;
-        }
 
         @Override
         public void handle1ByteCodePoint(int b1) {

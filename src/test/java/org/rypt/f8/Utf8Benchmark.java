@@ -39,7 +39,7 @@ public class Utf8Benchmark {
 
     @Benchmark
     public boolean f8() throws IOException {
-        return Utf8.isValid(new TestInputStream(), true);
+        return Utf8.isValidUpToTruncation(new TestInputStream());
     }
 
     @Benchmark

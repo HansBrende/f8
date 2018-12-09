@@ -64,7 +64,7 @@ public class Utf8Statistics extends OutputStream implements Utf8Handler<Never> {
 
     @Override
     public void close() {
-        Utf8.transferFinalState(state, this);
+        Utf8.finish(state, this);
         state = 0;
     }
 
