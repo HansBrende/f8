@@ -97,35 +97,4 @@ public interface Utf8Handler<X extends Exception> extends Utf8ByteHandler<X> {
         };
     }
 
-    static Utf8Handler<Never> of(StringBuilder writer) {
-        return new Utf8Handler<Never>() {
-            @Override
-            public void handleCodePoint(int codePoint) throws Never {
-                writer.appendCodePoint(codePoint);
-            }
-            @Override
-            public void handleError() throws Never {
-                writer.append('�');
-            }
-            @Override
-            public void handle1ByteCodePoint(int ascii) {
-                writer.append((char)ascii);
-            }
-            @Override
-            public void handle2ByteCodePoint(int b1, int b2) {
-                writer.append((char)Utf8.codePoint(b1, b2));
-            }
-            @Override
-            public void handle3ByteCodePoint(int b1, int b2, int b3) {
-                writer.append((char)Utf8.codePoint(b1, b2, b3));
-            }
-            @Override
-            public void handle4ByteCodePoint(int b1, int b2, int b3, int b4) {
-                int cp = Utf8.codePoint(b1, b2, b3, b4);
-                writer.append(Character.highSurrogate(cp));
-                writer.append(Character.lowSurrogate(cp));
-            }
-        };
-    }
-
 }
