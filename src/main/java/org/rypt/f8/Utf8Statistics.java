@@ -7,7 +7,7 @@ import java.io.OutputStream;
  *
  * @author Hans Brende (hansbrende@apache.org)
  */
-public class Utf8Statistics extends OutputStream implements Utf8Handler<Never> {
+public class Utf8Statistics extends OutputStream implements Utf8Handler<RuntimeException> {
 
     private int state;
     private long numValid;

@@ -204,26 +204,26 @@ public class Utf8Test {
         }
 
         @Override
-        public void handlePrefixError(int b1) throws Never {
+        public void handlePrefixError(int b1) {
             super.handlePrefixError(b1);
             assertByte(b1);
         }
 
         @Override
-        public void handleContinuationError(int b1, int nextByte) throws Never {
+        public void handleContinuationError(int b1, int nextByte) {
             super.handleContinuationError(b1, nextByte);
             assertByte(b1);
         }
 
         @Override
-        public void handleContinuationError(int b1, int b2, int nextByte) throws Never {
+        public void handleContinuationError(int b1, int b2, int nextByte) {
             super.handleContinuationError(b1, b2, nextByte);
             assertByte(b1);
             assertByte(b2);
         }
 
         @Override
-        public void handleContinuationError(int b1, int b2, int b3, int nextByte) throws Never {
+        public void handleContinuationError(int b1, int b2, int b3, int nextByte) {
             super.handleContinuationError(b1, b2, b3, nextByte);
             assertByte(b1);
             assertByte(b2);

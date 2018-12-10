@@ -326,16 +326,16 @@ public class Utf8 {
         return s == SURROGATE_PREFIX;
     }
 
-    private static class Validator implements Utf8ByteHandler<Utf8Error> {
+    private static abstract class Validator implements Utf8ByteHandler<Utf8Error> {
 
-        private Validator() {
-        }
+        abstract void continuationError(int err) throws Utf8Error;
 
-        void continuationError(int err) throws Utf8Error {
-            Utf8Error.fail();
-        }
-
-        private static final Validator strict = new Validator();
+        private static final Validator strict = new Validator() {
+            @Override
+            void continuationError(int err) throws Utf8Error {
+                Utf8Error.fail();
+            }
+        };
 
         private static final Validator allowingTruncation = new Validator() {
             @Override
