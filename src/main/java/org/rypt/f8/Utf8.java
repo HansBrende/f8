@@ -233,7 +233,7 @@ public class Utf8 {
     }
 
     private static final int BUFFER_SIZE = 8192;
-    public static <X extends Exception> void transfer(InputStream inputStream, Utf8ByteHandler<X> handler) throws IOException, X {
+    public static <X extends Exception> void transferAndFinish(InputStream inputStream, Utf8ByteHandler<X> handler) throws IOException, X {
         int state = 0;
         byte[] bytes = new byte[BUFFER_SIZE];
         int n;
@@ -246,7 +246,7 @@ public class Utf8 {
 
     public static boolean isFullyValid(InputStream is) throws IOException {
         try {
-            transfer(is, Validator.strict);
+            transferAndFinish(is, Validator.strict);
             return true;
         } catch (Utf8Error e) {
             return false;
@@ -255,7 +255,7 @@ public class Utf8 {
 
     public static boolean isValidUpToTruncation(InputStream is) throws IOException {
         try {
-            transfer(is, Validator.allowingTruncation);
+            transferAndFinish(is, Validator.allowingTruncation);
             return true;
         } catch (Utf8Error e) {
             return false;
@@ -324,6 +324,20 @@ public class Utf8 {
      */
     public static boolean isSurrogatePrefixErrorState(int s) {
         return s == SURROGATE_PREFIX;
+    }
+
+    private static class Utf8Error extends Exception {
+
+        private static final Utf8Error error = new Utf8Error();
+
+        private Utf8Error() {
+            super(null, null, false, false);
+        }
+
+        public static void fail() throws Utf8Error {
+            throw error;
+        }
+
     }
 
     private static abstract class Validator implements Utf8ByteHandler<Utf8Error> {

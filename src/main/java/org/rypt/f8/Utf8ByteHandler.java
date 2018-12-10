@@ -1,8 +1,5 @@
 package org.rypt.f8;
 
-import java.io.IOException;
-import java.io.OutputStream;
-
 /**
  * Base interface for handling a UTF-8 encoded byte stream
  *

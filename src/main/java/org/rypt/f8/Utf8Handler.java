@@ -3,7 +3,7 @@ package org.rypt.f8;
 import java.io.IOException;
 
 /**
- * Base interface for handling a UTF-8 encoded byte stream
+ * Base interface for handling a stream of unicode code points and errors
  *
  * @author Hans Brende (hansbrende@apache.org)
  */
