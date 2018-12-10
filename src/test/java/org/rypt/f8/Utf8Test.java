@@ -2,6 +2,8 @@ package org.rypt.f8;
 
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.Arrays;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -15,54 +17,44 @@ public class Utf8Test {
 
     @Test
     public void testStates() {
-        byte[] bytes = new byte[0];
-        testStates(bytes);
-        for (int b0 = 0; b0 < 256; b0++) {
-            bytes = new byte[]{(byte)b0};
-            testStates(bytes);
-            for (int b1 = 0; b1 < 256; b1++) {
-                bytes = new byte[]{(byte)b0, (byte)b1};
-                testStates(bytes);
-                for (int b2 = 0; b2 < 256; b2++) {
-                    bytes = new byte[]{(byte)b0, (byte)b1, (byte)b2};
-                    testStates(bytes);
-                    for (int b = 0xf0; b < 0xf5; b++) {
-                        bytes = new byte[]{(byte)b, (byte)b0, (byte)b1, (byte)b2};
-                        testStates(bytes);
-                    }
-                }
-            }
-        }
+        Sem.testAllCombinations(sems -> testStates(sems.generate()));
     }
 
     @Test
     public void testStrings() {
-        TestStringBuilder sb = new TestStringBuilder();
-        byte[] bytes = new byte[0];
-        testStrings(bytes, sb);
-        for (int b0 = 0; b0 < 256; b0++) {
-            bytes = new byte[]{(byte)b0};
-            testStrings(bytes, sb);
-            for (int b1 = 0; b1 < 256; b1++) {
-                bytes = new byte[]{(byte)b0, (byte)b1};
-                testStrings(bytes, sb);
-                for (int b2 = 0; b2 < 256; b2++) {
-                    bytes = new byte[]{(byte)b0, (byte)b1, (byte)b2};
-                    testStrings(bytes, sb);
-                    for (int b = 0xf0; b < 0xf5; b++) {
-                        bytes = new byte[]{(byte)b, (byte)b0, (byte)b1, (byte)b2};
-                        testStrings(bytes, sb);
-                    }
-                }
-            }
-        }
+        TestStringBuilder t = new TestStringBuilder();
+        Sem.testAllCombinations(sems -> testStrings(sems.generate(), t));
     }
 
     @Test
-    public void testRandom() {
+    public void testIsValid() {
+        Sem.testAllCombinations(sems -> {
+            byte[] bytes = sems.generate();
+            boolean valid = Arrays.equals(bytes, new String(bytes, UTF_8).getBytes(UTF_8));
+            assertEquals(valid, Utf8.isFullyValid(new ByteArrayInputStream(bytes)));
+            Utf8Statistics stats = new Utf8Statistics();
+            Utf8.transferAndFinish(new ByteArrayInputStream(bytes), stats);
+            assertEquals(valid, stats.countInvalid() == 0);
+            assertEquals(stats.countInvalidIgnoringTruncation() == 0,
+                    Utf8.isValidUpToTruncation(new ByteArrayInputStream(bytes)));
+        });
+    }
+
+    @Test
+    public void testAppendable() {
+        Sem.testAllCombinations(sems -> {
+            byte[] bytes = sems.generate();
+            StringBuilder appendable = new StringBuilder();
+            Utf8.transferAndFinish(new ByteArrayInputStream(bytes), Utf8Handler.of(appendable));
+            assertEquals(new String(bytes, UTF_8), appendable.toString());
+        });
+    }
+
+    @Test
+    public void testRandom() throws IOException {
         TestStringBuilder testSb = new TestStringBuilder();
         for (int shift = 0; shift < 13; shift++) {
-            for (int test = 0; test < 1_000_000; test++) {
+            for (int test = 0; test < 100000; test++) {
                 int codePointCount = (int) (Math.random() * 16 + 1);
                 StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < codePointCount; i++) {
@@ -73,8 +65,23 @@ public class Utf8Test {
                 int a = (int) (Math.random() * bytes.length);
                 int b = (int) (Math.random() * bytes.length);
                 testStrings(Arrays.copyOfRange(bytes, Math.min(a, b), Math.max(a, b) + 1), testSb);
+                testIsValidAllowingTruncation(true, Arrays.copyOf(bytes, a));
+
+                boolean valid;
+                do {
+                    bytes[a] = (byte) (Math.random() * 256);
+                    valid = Arrays.equals(bytes, new String(bytes, UTF_8).getBytes(UTF_8));
+                } while (valid);
+                testStrings(bytes, testSb);
+                if (a < bytes.length - 3) {
+                    testIsValidAllowingTruncation(false, bytes);
+                }
             }
         }
+    }
+
+    public static void testIsValidAllowingTruncation(boolean expected, byte[] bytes) throws IOException {
+        assertEquals(expected, Utf8.isValidUpToTruncation(new ByteArrayInputStream(bytes)));
     }
 
     private static boolean assertState(int state) {
