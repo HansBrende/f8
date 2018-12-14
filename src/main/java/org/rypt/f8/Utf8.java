@@ -2,6 +2,7 @@ package org.rypt.f8;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The core UTF-8 state machine.
@@ -233,13 +234,19 @@ public class Utf8 {
     }
 
     private static final int BUFFER_SIZE = 8192;
+    private static final AtomicReference<byte[]> buf = new AtomicReference<>();
     public static <X extends Exception> void transferAndFinish(InputStream inputStream, Utf8ByteHandler<X> handler) throws IOException, X {
+        AtomicReference<byte[]> buf = Utf8.buf;
+        byte[] bytes = buf.get();
+        if (bytes == null || !buf.compareAndSet(bytes, null)) {
+            bytes = new byte[BUFFER_SIZE];
+        }
         int state = 0;
-        byte[] bytes = new byte[BUFFER_SIZE];
         int n;
         while ((n = inputStream.read(bytes, 0, BUFFER_SIZE)) != -1) {
             state = nextState(state, bytes, 0, n, handler);
         }
+        buf.set(bytes);
         finish(state, handler);
     }
 

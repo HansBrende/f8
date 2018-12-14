@@ -22,8 +22,7 @@ public class Utf8Test {
 
     @Test
     public void testStrings() {
-        TestStringBuilder t = new TestStringBuilder();
-        Sem.testAllCombinations(sems -> testStrings(sems.generate(), t));
+        Sem.testAllCombinations(sems -> testStrings(sems.generate(), new TestStringBuilder()));
     }
 
     @Test

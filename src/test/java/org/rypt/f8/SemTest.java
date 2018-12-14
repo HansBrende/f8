@@ -18,6 +18,7 @@ public class SemTest {
         for (Sem sem : Sem.values()) {
             assertTrue(sem.min <= sem.max);
             assertTrue((byte)sem.min <= (byte)sem.max);
+            assertTrue(sem.count > 0);
             for (int i = sem.min; i <= sem.max; i++) {
                 assertTrue(set.add(i));
             }
@@ -38,20 +39,35 @@ public class SemTest {
             }
         }
 
-        AtomicLong count = new AtomicLong();
-        Sem.testAllCombinations(sems -> {
-            byte[] bytes1 = sems.generate();
-            byte[] bytes2 = sems.generate();
-            String s1 = new String(bytes1, UTF_8);
-            String s2 = new String(bytes2, UTF_8);
-            assertEquals(s1.length(), s2.length());
-            boolean v1 = Arrays.equals(bytes1, s1.getBytes(UTF_8));
-            boolean v2 = Arrays.equals(bytes2, s2.getBytes(UTF_8));
-            assertEquals(v1, v2);
-            count.incrementAndGet();
-        });
+        for (int maxArraySize = 0; maxArraySize < 6; maxArraySize++) {
+            AtomicLong[] counts = new AtomicLong[maxArraySize + 1];
+            for (int i = 0; i < counts.length; i++) {
+                counts[i] = new AtomicLong();
+            }
+            Sem.combinations(maxArraySize).forEach(sems -> {
+                byte[] bytes1 = sems.generate();
+                byte[] bytes2 = sems.generate();
+                assertEquals(bytes1.length, bytes2.length);
+                counts[bytes1.length].incrementAndGet();
+                String s1 = new String(bytes1, UTF_8);
+                String s2 = new String(bytes2, UTF_8);
+                assertEquals(s1.length(), s2.length());
+                boolean v1 = Arrays.equals(bytes1, s1.getBytes(UTF_8));
+                boolean v2 = Arrays.equals(bytes2, s2.getBytes(UTF_8));
+                assertEquals(v1, v2);
+            });
 
-        long l = Sem.values().length;
-        assertEquals(1 + l + l*l + l*l*l + l*l*l*l + l*l*l*l*l, count.get());
+            long l = Sem.values().length;
+
+            for (int i = 0; i < counts.length; i++) {
+                long prod = 1;
+                for (int j = 0; j < i; j++) {
+                    prod *= l;
+                }
+                assertEquals(prod, counts[i].get());
+            }
+            assertEquals(1, counts[0].get());
+        }
+
     }
 }

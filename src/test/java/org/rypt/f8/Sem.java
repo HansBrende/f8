@@ -1,6 +1,8 @@
 package org.rypt.f8;
 
-import static org.junit.Assert.assertTrue;
+import java.util.Arrays;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 enum Sem {
     ASCII(0, 0x7f),
@@ -26,51 +28,45 @@ enum Sem {
         this.min = min;
         this.max = max;
         this.count = max - min + 1;
-        assertTrue(this.min <= this.max);
-        assertTrue(this.count > 0);
     }
+
+    private static final int COUNT = values().length;
+    private static final Sem FIRST = values()[0];
 
     byte generate() {
-        byte b = (byte)(Math.random() * count + min);
-        assertTrue(b >= (byte)min);
-        assertTrue(b <= (byte)max);
-        return b;
+        return (byte)(Math.random() * count + min);
     }
 
-    public interface CombinationConsumer {
+    public interface CombinationConsumer extends Consumer<Combination> {
         void acc(Combination c) throws Exception;
 
         default void accept(Combination c) {
             try {
                 acc(c);
+            } catch (RuntimeException e) {
+                throw e;
             } catch (Exception e) {
-                sneakyThrow(e);
+                throw new RuntimeException(e);
             }
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private static <E extends Throwable> void sneakyThrow(Throwable e) throws E {
-        throw (E) e;
+    static void testAllCombinations(CombinationConsumer test) {
+        combinations(5).forEach(test);
+        combinations(5).parallel().forEach(test);
     }
 
-    static void testAllCombinations(CombinationConsumer tester) {
-        tester.accept(new Combination());
-        for (Sem s0 : values()) {
-            tester.accept(new Combination(s0));
-            for (Sem s1 : values()) {
-                tester.accept(new Combination(s0, s1));
-                for (Sem s2 : values()) {
-                    tester.accept(new Combination(s0, s1, s2));
-                    for (Sem s3 : values()) {
-                        tester.accept(new Combination(s0, s1, s2, s3));
-                        for (Sem s4 : values()) {
-                            tester.accept(new Combination(s0, s1, s2, s3, s4));
-                        }
-                    }
-                }
+    public static Stream<Combination> combinations(int maxArraySize) {
+        long maxSize = 0;
+
+        for (int i = 0; i <= maxArraySize; i++) {
+            long prod = 1;
+            for (int j = 0; j < i; j++) {
+                prod *= COUNT;
             }
+            maxSize += prod;
         }
+        return Stream.iterate(new Combination(), Combination::next).limit(maxSize).unordered();
     }
 
     public static class Combination {
@@ -81,12 +77,34 @@ enum Sem {
         }
 
         public byte[] generate() {
+            Sem[] array = this.array;
             byte[] bytes = new byte[array.length];
             int pos = 0;
             for (Sem sem : array) {
                 bytes[pos++] = sem.generate();
             }
             return bytes;
+        }
+
+        Combination next() {
+            Sem[] array = this.array;
+            int len = array.length;
+            for (int i = len - 1; i >= 0; i--) {
+                int nextOrd = array[i].ordinal() + 1;
+                if (nextOrd != COUNT) {
+                    Sem[] copy = Arrays.copyOf(array, len);
+                    copy[i++] = values()[nextOrd];
+                    for (; i < len; i++) {
+                        copy[i] = FIRST;
+                    }
+                    return new Combination(copy);
+                }
+            }
+            Sem[] n = new Sem[len + 1];
+            for (int i = 0; i <= len; i++) {
+                n[i] = FIRST;
+            }
+            return new Combination(n);
         }
     }
 
