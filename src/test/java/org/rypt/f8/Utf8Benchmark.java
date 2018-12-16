@@ -4,6 +4,10 @@ import org.mozilla.intl.chardet.nsDetector;
 import org.mozilla.intl.chardet.nsUTF8Verifier;
 import org.mozilla.intl.chardet.nsVerifier;
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.Param;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
@@ -14,187 +18,105 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.SequenceInputStream;
 import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 @SuppressWarnings("ALL")
+@State(Scope.Benchmark)
 public class Utf8Benchmark {
 
-//    @Benchmark
-//    public boolean guava() throws IOException {
-//        byte[] bytes = copy(new TestInputStream(), new ByteArrayOutputStream()).toByteArray();
-//
-//        return com.google.common.base.Utf8.isWellFormed(bytes);
-//    }
-//
-//    @Benchmark
-//    public boolean jdk() throws IOException {
-//        byte[] bytes = copy(new TestInputStream(), new ByteArrayOutputStream()).toByteArray();
-//
-//        return Arrays.equals(bytes, new String(bytes, UTF_8).getBytes(UTF_8));
-//    }
+    private static final int LENGTH_BIG = 1024 * 1024;
+    private static final int LENGTH_SMALL = 1024;
 
-    static InputStream stream(int prefix, int length) {
-        return new TestInputStream(length).after(prefix);
-    }
+    @Param({""+LENGTH_SMALL, ""+LENGTH_BIG})
+    public int length;
 
-    static boolean f8(int prefix, int length) throws IOException {
-        return Utf8.isFullyValid(stream(prefix, length));
-    }
+    @Param
+    public Utf8Detector utf8Detector;
 
-    static boolean stats(int prefix, int length) throws IOException {
-        Utf8Statistics stats = new Utf8Statistics();
-        Utf8.transferAndFinish(stream(prefix, length), stats);
-        return stats.countInvalid() == 0;
-    }
-
-    static boolean basic(int prefix, int length) throws IOException {
-        InputStream test = stream(prefix, length);
-        int state = 0;
-        int b;
-        while ((b = test.read()) != -1) {
-            state = Utf8.nextState(state, (byte)b);
-            if (Utf8.isErrorState(state)) {
-                return false;
+    public enum Utf8Detector {
+        f8 {
+            @Override
+            boolean isValid(InputStream in) throws IOException {
+                return Utf8.isValidUpToTruncation(in);
             }
-        }
-        return state >= 0;
+        },
+        jdk {
+            @Override
+            boolean isValid(InputStream in) throws IOException {
+                byte[] bytes = copy(in, new ByteArrayOutputStream()).toByteArray();
+
+                return Arrays.equals(bytes, new String(bytes, UTF_8).getBytes(UTF_8));
+            }
+        },
+        guava {
+            @Override
+            boolean isValid(InputStream in) throws IOException {
+                byte[] bytes = copy(in, new ByteArrayOutputStream()).toByteArray();
+
+                return com.google.common.base.Utf8.isWellFormed(bytes);
+            }
+        },
+        jchardet {
+            @Override
+            boolean isValid(InputStream in) throws IOException {
+                int b;
+                byte state = 0;
+                while ((b = in.read()) != -1) {
+                    state = nsVerifier.getNextState(jchardetUtf8Verifier, (byte)b, state);
+                    if (state == 1) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        },
+        jchardetNsDetector {
+            @Override
+            boolean isValid(InputStream in) throws IOException {
+                byte[] bytes = copy(in, new ByteArrayOutputStream()).toByteArray();
+
+                nsDetector det = new nsDetector(nsDetector.ALL);
+                det.DoIt(bytes, bytes.length, false);
+                det.DataEnd();
+                return "UTF-8".equalsIgnoreCase(det.getProbableCharsets()[0]);
+            }
+        };
+
+        abstract boolean isValid(InputStream in) throws IOException;
+    }
+
+
+    @Benchmark
+    public boolean testLegal() throws IOException {
+        return utf8Detector.isValid(new ByteArrayInputStream(
+                        testBytes[0], 0, length));
     }
 
     @Benchmark
-    public boolean len0_invalid_f8() throws IOException {
-        return f8(-1, 0);
+    public boolean testIllegal() throws IOException {
+        return utf8Detector.isValid(new ByteArrayInputStream(
+                testBytes[1], 0, length));
     }
 
-    @Benchmark
-    public boolean len0_invalid_stats() throws IOException {
-        return stats(-1, 0);
-    }
-
-    @Benchmark
-    public boolean len0_invalid_basic() throws IOException {
-        return basic(-1, 0);
-    }
-
-    @Benchmark
-    public boolean len0_valid_f8() throws IOException {
-        return f8(0, 0);
-    }
-
-    @Benchmark
-    public boolean len0_valid_stats() throws IOException {
-        return stats(0, 0);
-    }
-
-    @Benchmark
-    public boolean len0_valid_basic() throws IOException {
-        return basic(0, 0);
-    }
-
-    @Benchmark
-    public boolean len256_invalid_f8() throws IOException {
-        return f8(-1, 256);
-    }
-
-    @Benchmark
-    public boolean len256_invalid_stats() throws IOException {
-        return stats(-1, 256);
-    }
-
-    @Benchmark
-    public boolean len256_invalid_basic() throws IOException {
-        return basic(-1, 256);
-    }
-
-    @Benchmark
-    public boolean len256_valid_f8() throws IOException {
-        return f8(0, 256);
-    }
-
-    @Benchmark
-    public boolean len256_valid_stats() throws IOException {
-        return stats(0, 256);
-    }
-
-    @Benchmark
-    public boolean len256_valid_basic() throws IOException {
-        return basic(0, 256);
-    }
-
-    @Benchmark
-    public boolean len4096_invalid_f8() throws IOException {
-        return f8(-1, 4096);
-    }
-
-    @Benchmark
-    public boolean len4096_invalid_stats() throws IOException {
-        return stats(-1, 4096);
-    }
-
-    @Benchmark
-    public boolean len4096_invalid_basic() throws IOException {
-        return basic(-1, 4096);
-    }
-
-    @Benchmark
-    public boolean len4096_valid_f8() throws IOException {
-        return f8(0, 4096);
-    }
-
-    @Benchmark
-    public boolean len4096_valid_stats() throws IOException {
-        return stats(0, 4096);
-    }
-
-    @Benchmark
-    public boolean len4096_valid_basic() throws IOException {
-        return basic(0, 4096);
-    }
-
-//    @Benchmark
-//    public boolean lenMax_valid_f8() throws IOException {
-//        return f8(0, 188256);
-//    }
-//
-//    @Benchmark
-//    public boolean lenMax_valid_stats() throws IOException {
-//        return stats(0, 188256);
-//    }
-//
-//    @Benchmark
-//    public boolean lenMax_valid_basic() throws IOException {
-//        return basic(0, 188256);
-//    }
-
-
-
-//
-//    @Benchmark
-//    public boolean jchardetNsDetector() throws IOException {
-//        byte[] bytes = copy(new TestInputStream(), new ByteArrayOutputStream()).toByteArray();
-//
-//        nsDetector det = new nsDetector(nsDetector.ALL);
-//        det.DoIt(bytes, bytes.length, false);
-//        det.DataEnd();
-//        return "UTF-8".equalsIgnoreCase(det.getProbableCharsets()[0]);
-//    }
-//
-//    @Benchmark
-//    public boolean jchardetNsVerifier() throws IOException {
-//        JchardetVerifier verifier = copy(new TestInputStream(), new JchardetVerifier());
-//
-//        return verifier.state != 1;
-//    }
 
     public static void main(String[] args) throws RunnerException {
+        for (byte[] bytes : testBytes) {
+            if (LENGTH_BIG > bytes.length) {
+                throw new AssertionError();
+            }
+        }
+
         Options opt = new OptionsBuilder()
                 .include(MethodHandles.lookup().lookupClass().getSimpleName())
-                .warmupIterations(1)
-                .measurementIterations(1)
+//                .warmupIterations(1)
+//                .measurementIterations(1)
+                .mode(Mode.AverageTime)
+                .timeUnit(TimeUnit.MICROSECONDS)
                 .forks(1)
                 .build();
 
@@ -213,51 +135,25 @@ public class Utf8Benchmark {
         return out;
     }
 
-    private static class JchardetVerifier extends OutputStream {
-        private final nsUTF8Verifier utf8Verifier = new nsUTF8Verifier();
-        byte state = 0;
-        @Override
-        public void write(int b) {
-            state = nsVerifier.getNextState(utf8Verifier, (byte)b, state);
-        }
+    private static final nsUTF8Verifier jchardetUtf8Verifier = new nsUTF8Verifier();
 
-        @Override
-        public void write(byte[] bytes) throws IOException {
-            nsUTF8Verifier utf8Verifier = this.utf8Verifier;
-            byte state = this.state;
-            for (byte b : bytes) {
-                state = nsUTF8Verifier.getNextState(utf8Verifier, b, state);
-            }
-            this.state = state;
-        }
+    private static final byte[][] testBytes = {
+            createValidBytes(),
+            createInvalidBytes()
+    };
 
-        @Override
-        public void write(byte[] b, int off, int len) throws IOException {
-            nsUTF8Verifier utf8Verifier = this.utf8Verifier;
-            byte state = this.state;
-            for (int i = off, to = off + len; i < to; i++) {
-                state = nsUTF8Verifier.getNextState(utf8Verifier, b[i], state);
-            }
-            this.state = state;
-        }
+    private static byte[] createValidBytes() {
+        return IntStream.concat(IntStream.concat(IntStream.range(0x20, 0xD800),
+                //jchardet incorrectly counts code points from 0x10000 to 0x20000 as illegal
+                IntStream.range(0xE000, 0x10000)), IntStream.range(0x20000, 0x54828))
+                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+                .toString().getBytes(UTF_8);
     }
 
-    private static class TestInputStream extends ByteArrayInputStream {
-        TestInputStream(int length) {
-            super(testBytes, 0, length);
-        }
-
-        TestInputStream() {
-            super(testBytes);
-        }
-
-        public InputStream after(int valid) {
-            return new SequenceInputStream(new ByteArrayInputStream(new byte[]{(byte)valid}), this);
-        }
+    private static byte[] createInvalidBytes() {
+        byte[] array = createValidBytes();
+        array[array.length / 256] = (byte)0xc0;
+        return array;
     }
-
-    private static final byte[] testBytes = IntStream.concat(IntStream.range(0x20, 0xD800), IntStream.range(0xE000, 0x10000))
-            .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
-            .toString().getBytes(UTF_8);
 
 }

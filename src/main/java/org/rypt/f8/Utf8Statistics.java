@@ -23,17 +23,29 @@ public class Utf8Statistics extends OutputStream implements Utf8Handler<RuntimeE
         numTruncated = 0;
     }
 
+    /**
+     * @deprecated Use {@link Utf8#nextState(int, byte, Utf8ByteHandler)} instead.
+     */
     @Override
+    @Deprecated
     public void write(int b) {
         state = Utf8.nextState(state, (byte)b, this);
     }
 
+    /**
+     * @deprecated Use {@link Utf8#nextState(int, byte[], int, int, Utf8ByteHandler)} instead.
+     */
     @Override
+    @Deprecated
     public void write(byte[] b, int off, int len) {
         state = Utf8.nextState(state, b, off, len, this);
     }
 
+    /**
+     * @deprecated Use {@link Utf8#nextState(int, byte[], int, int, Utf8ByteHandler)} instead.
+     */
     @Override
+    @Deprecated
     public void write(byte[] b) {
         write(b, 0, b.length);
     }
@@ -62,7 +74,11 @@ public class Utf8Statistics extends OutputStream implements Utf8Handler<RuntimeE
         handleError();
     }
 
+    /**
+     * @deprecated Use {@link Utf8#finish(int, Utf8ByteHandler)} instead.
+     */
     @Override
+    @Deprecated
     public void close() {
         Utf8.finish(state, this);
         state = 0;

@@ -340,11 +340,6 @@ public class Utf8 {
         private Utf8Error() {
             super(null, null, false, false);
         }
-
-        public static void fail() throws Utf8Error {
-            throw error;
-        }
-
     }
 
     private static abstract class Validator implements Utf8ByteHandler<Utf8Error> {
@@ -354,7 +349,7 @@ public class Utf8 {
         private static final Validator strict = new Validator() {
             @Override
             void continuationError(int err) throws Utf8Error {
-                Utf8Error.fail();
+                throw Utf8Error.error;
             }
         };
 
@@ -362,7 +357,7 @@ public class Utf8 {
             @Override
             void continuationError(int err) throws Utf8Error {
                 if (err != END_OF_STREAM) {
-                    Utf8Error.fail();
+                    throw Utf8Error.error;
                 }
             }
         };
@@ -393,7 +388,7 @@ public class Utf8 {
         }
         @Override
         public void handlePrefixError(int err) throws Utf8Error {
-            Utf8Error.fail();
+            throw Utf8Error.error;
         }
     }
 }

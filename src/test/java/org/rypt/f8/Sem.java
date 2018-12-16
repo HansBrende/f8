@@ -20,6 +20,17 @@ enum Sem {
     f4(0xf4, 0xf4),
     fErr(0xf5, 0xff);
 
+    enum State {
+        START {
+            @Override
+            State generateNext() {
+                return null;
+            }
+        };
+
+        abstract State generateNext();
+    }
+
     final int min;
     final int max;
     final int count;
