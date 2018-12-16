@@ -113,8 +113,6 @@ public class Utf8Benchmark {
 
         Options opt = new OptionsBuilder()
                 .include(MethodHandles.lookup().lookupClass().getSimpleName())
-//                .warmupIterations(1)
-//                .measurementIterations(1)
                 .mode(Mode.AverageTime)
                 .timeUnit(TimeUnit.MICROSECONDS)
                 .forks(1)
