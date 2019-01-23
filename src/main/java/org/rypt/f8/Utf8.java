@@ -13,39 +13,7 @@ public class Utf8 {
 
     private Utf8() { throw new AssertionError(); }
 
-//    public static void main(String[] args) {
-//
-//        TreeMap<String, TreeMap<Charset, Integer>> values = new TreeMap<>();
-//
-//        for (Charset charset : Charset.availableCharsets().values()) {
-//            if (charset.name().startsWith("x-") || charset.name().startsWith("X-") || !charset.canEncode()) {
-//                continue;
-//            }
-//            for (int codePoint = 0; codePoint <= Character.MAX_CODE_POINT; codePoint++) {
-//                int type = Character.getType(codePoint);
-//                if (type == Character.CONTROL || type == Character.UNASSIGNED || type == Character.PRIVATE_USE || type == Character.SURROGATE) {
-//                    continue;
-//                }
-//                String str = new String(Character.toChars(codePoint));
-//                byte[] bytes = str.getBytes(charset);
-//                if (!str.equals(new String(bytes, charset))) { //invalid code point for charset
-//                    continue;
-//                }
-//                for (byte b : bytes) {
-//                    if (b >= 0 && Character.isISOControl(b)) {
-//                        values.computeIfAbsent(String.format("0x%02X", b), k -> new TreeMap<>()).merge(charset, 1, (x, y) -> x + y);
-//                    }
-//                }
-//            }
-//        }
-//
-//        values.forEach((desc, map) -> System.out.println(desc + " is used in " + map.entrySet().stream().mapToInt(Map.Entry::getValue).sum()
-//                + " code points across charsets: " + map.entrySet().stream().sorted((e0, e1) -> Integer.compare(e1.getValue(), e0.getValue()))
-//                .map(e -> e.getKey() + " (" + e.getValue() + ")").collect(Collectors.toList())));
-//
-//    }
-
-    private static final int SURROGATE_PREFIX = -1;
+    static final int SURROGATE_PREFIX = -1;
     private static final int OTHER_ERROR = -2;
 
     /**
@@ -57,7 +25,9 @@ public class Utf8 {
      * @return the next UTF-8 state
      * @see Utf8#isErrorState(int)
      * @see Utf8#isIncompleteState(int)
+     * @deprecated Use {@link #nextState(int, byte, Utf8ByteHandler)} instead.
      */
+    @Deprecated
     public static int nextState(int s, byte b) {
         int z = s + 2;
         if ((z & (b + 64)) >= 0) {
@@ -95,20 +65,19 @@ public class Utf8 {
 
     /**
      * Returns the next UTF-8 state given a previous state, a next byte, and a code point handler.
-     * This function may call {@link #nextState(int, byte)} twice if the first invocation
-     * returns an error state, in which case only the second state will be returned from this method.
      * @param s the previous UTF-8 state returned from this function, or 0 for the initial state
      * @param b the next byte
      * @param handler the handler to delegate all code point and error handling to
      * @return the next UTF-8 state
+     * @see Utf8#isIncompleteState(int)
      */
     public static <X extends Exception> int nextState(int s, byte b, Utf8ByteHandler<X> handler) throws X {
-        if (((s + 2) & (b + 64)) >= 0) { //same as: s >= -2 || b >= (byte)0xc0
+        if (s >= OTHER_ERROR || b >= (byte)0xc0) {
             transferState(s, b, handler);
             if (b >= 0) {
                 handler.handle1ByteCodePoint(b);
                 return 0;
-            } else if ((-63 - b & b + 11) < 0) { //same as: b >= 0xc2 && b <= 0xf4
+            } else if (b >= (byte)0xc2 && b <= (byte)0xf4) {
                 return b;
             } else if (isSurrogatePrefixErrorState(s) && b < (byte)0xc0) {
                 handler.handleIgnoredByte(b);
@@ -143,85 +112,49 @@ public class Utf8 {
         }
     }
 
-    public static <X extends Exception> int nextState(int state, byte[] b, int off, int len, Utf8ByteHandler<X> handler) throws X {
-        final int to = off + len;
-        while ((state & (off - to)) < 0) {
-            state = nextState(state, b[off++], handler);
-        }
-
-        if (state < 0) {
+    public static <X extends Exception> int nextState(int state, byte[] b, int from, int to, Utf8ByteHandler<X> handler) throws X {
+        if (from >= to) {
+            if (from > to) {
+                throw new IllegalArgumentException(from + " > " + to);
+            }
             return state;
         }
 
-        for (;;) {
-            int b1 = 0;
-            while (off < to && (b1 = b[off++]) >= 0) {
-                handler.handle1ByteCodePoint(b1);
-            }
-            if (b1 >= 0) { //0xxxxxxx
-                return 0;
-            } else if ((b1 >> 5) == -2 && (b1 & 0x1e) != 0) {
-                if (off < to) { //110xxxxx 10xxxxxx
-                    int b2 = b[off++];
-                    if ((b2 & 0xc0) != 0x80) { //is not continuation
-                        handler.handleContinuationError(b1, b2);
-                        off--;
-                    } else {
-                        handler.handle2ByteCodePoint(b1, b2);
-                    }
-                } else { //110xxxxx
-                    return b1;
-                }
-            } else if ((b1 >> 4) == -2) {
-                if (off + 1 < to) { //1110xxxx 10xxxxxx 10xxxxxx
-                    int b2 = b[off++], b3;
-                    if (b1 == (byte)0xe0 && (b2 & 0xe0) == 0x80
-                            || (b2 & 0xc0) != 0x80) {
-                        handler.handleContinuationError(b1, b2);
-                        off--;
-                    } else if ((b3 = b[off++]) > (byte)0xbf) {
-                        handler.handleContinuationError(b1, b2, b3);
-                        off--;
-                    } else if (b1 == (byte)0xed && (b2 & 0xe0) == 0xa0) { //surrogate
-                        handler.handleContinuationError(b1, b2);
-                        handler.handleIgnoredByte(b2);
-                        handler.handleIgnoredByte(b3);
-                    } else {
-                        handler.handle3ByteCodePoint(b1, b2, b3);
-                    }
-                } else {
-                    if (off < to) {
-                        b1 = nextState(b1, b[off], handler);
-                    }
-                    return b1;
-                }
-            } else if ((b1 >> 3) == -2) {
-                if (off + 2 < to) { //11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-                    int b2 = b[off++], b3, b4;
-                    if ((b2 >> 6 ^ -2 | (b1 << 28) + 0x70 + b2 >> 30) != 0) {
-                        handler.handleContinuationError(b1, b2);
-                        off--;
-                    } else if ((b3 = b[off++]) > (byte)0xbf) {
-                        handler.handleContinuationError(b1, b2, b3);
-                        off--;
-                    } else if ((b4 = b[off++]) > (byte)0xbf) {
-                        handler.handleContinuationError(b1, b2, b3, b4);
-                        off--;
-                    } else {
-                        handler.handle4ByteCodePoint(b1, b2, b3, b4);
-                    }
-                } else if (b1 > (byte)0xf4) {
-                    handler.handlePrefixError(b1);
-                } else {
-                    while (off < to) {
-                        b1 = nextState(b1, b[off++], handler);
-                    }
-                    return b1;
-                }
-            } else {
-                handler.handlePrefixError(b1);
-            }
+        if (state < 0) {
+            byte n;
+            do {
+                state = nextState(state, n = b[from++], handler);
+                if (from == to)
+                    return state;
+            } while (state != 0 && state != n);
+            from += state >> 31;
         }
+
+        do {
+            int n = b[from++];
+            if (n < 0)
+                return __.state(b, from - 1, to, handler);
+            handler.handle1ByteCodePoint(n);
+        } while (from != to);
+
+        return 0;
+    }
+
+    private static final int BUFFER_SIZE = 8192;
+    private static final AtomicReference<byte[]> buf = new AtomicReference<>();
+
+    public static <X extends Exception> int nextState(int state, InputStream inputStream, Utf8ByteHandler<X> handler) throws IOException, X {
+        AtomicReference<byte[]> buf = Utf8.buf;
+        byte[] bytes = buf.get();
+        if (bytes == null || !buf.compareAndSet(bytes, null)) {
+            bytes = new byte[BUFFER_SIZE];
+        }
+        int n;
+        while ((n = inputStream.read(bytes, 0, BUFFER_SIZE)) != -1) {
+            state = nextState(state, bytes, 0, n, handler);
+        }
+        buf.set(bytes);
+        return state;
     }
 
     /**
@@ -233,40 +166,72 @@ public class Utf8 {
         transferState(finalState, Utf8ByteHandler.END_OF_STREAM, handler);
     }
 
-    private static final int BUFFER_SIZE = 8192;
-    private static final AtomicReference<byte[]> buf = new AtomicReference<>();
-    public static <X extends Exception> void transferAndFinish(InputStream inputStream, Utf8ByteHandler<X> handler) throws IOException, X {
+    /**
+     * This method is semantically equivalent to:
+     * <pre>{@code
+     * int finalState = Utf8.nextState(0, is, handler);
+     * Utf8.finish(finalState, handler);
+     * }</pre>
+     * @param is the input stream
+     * @param handler the handler
+     * @param <X> the handler exception type
+     * @throws IOException if the input stream threw this exception
+     * @throws X if the handler threw this exception
+     */
+    public static <X extends Exception> void transfer(InputStream is, Utf8ByteHandler<X> handler) throws IOException, X {
+        finish(nextState(0, is, handler), handler);
+    }
+
+    public static Validity validity(InputStream is) throws IOException {
         AtomicReference<byte[]> buf = Utf8.buf;
-        byte[] bytes = buf.get();
-        if (bytes == null || !buf.compareAndSet(bytes, null)) {
-            bytes = new byte[BUFFER_SIZE];
+        byte[] b = buf.get();
+        if (b == null || !buf.compareAndSet(b, null)) {
+            b = new byte[BUFFER_SIZE];
         }
-        int state = 0;
         int n;
-        while ((n = inputStream.read(bytes, 0, BUFFER_SIZE)) != -1) {
-            state = nextState(state, bytes, 0, n, handler);
+        while ((n = is.read(b, 0, BUFFER_SIZE)) >= 0) {
+            for (int i = 0; i < n; i++) {
+                if (b[i] < 0) {
+                    for (Validity v = __.validity(b, i, n); v != Validity.MALFORMED; v = __.validity(b, 0, n)) {
+                        int r = 0;
+                        switch (v) {
+                            case UNDERFLOW_R3: b[r++] = b[n - 3];
+                            case UNDERFLOW_R2: b[r++] = b[n - 2];
+                            case UNDERFLOW_R1: b[r++] = b[n - 1];
+                        }
+                        if ((n = is.read(b, r, BUFFER_SIZE - r)) < 0) {
+                            buf.set(b);
+                            return v;
+                        }
+                        n += r;
+                    }
+                    buf.set(b);
+                    return Validity.MALFORMED;
+                }
+            }
         }
-        buf.set(bytes);
-        finish(state, handler);
+        buf.set(b);
+        return Validity.SINGLE_BYTES;
     }
 
-
-    public static boolean isFullyValid(InputStream is) throws IOException {
-        try {
-            transferAndFinish(is, Validator.strict);
-            return true;
-        } catch (Utf8Error e) {
-            return false;
+    /**
+     * Returns the validity of the specified byte array between the specified indexes
+     * @param b the byte array
+     * @param from the start index
+     * @param to the end index, exclusive
+     * @return the validity
+     */
+    public static Validity validity(byte[] b, int from, int to) {
+        if (from > to) {
+            throw new IllegalArgumentException(from + " > " + to);
         }
-    }
 
-    public static boolean isValidUpToTruncation(InputStream is) throws IOException {
-        try {
-            transferAndFinish(is, Validator.allowingTruncation);
-            return true;
-        } catch (Utf8Error e) {
-            return false;
+        for (int i = from; i < to; i++) {
+            if (b[i] < 0) {
+                return __.validity(b, i, to);
+            }
         }
+        return Validity.SINGLE_BYTES;
     }
 
     /**
@@ -333,62 +298,4 @@ public class Utf8 {
         return s == SURROGATE_PREFIX;
     }
 
-    private static class Utf8Error extends Exception {
-
-        private static final Utf8Error error = new Utf8Error();
-
-        private Utf8Error() {
-            super(null, null, false, false);
-        }
-    }
-
-    private static abstract class Validator implements Utf8ByteHandler<Utf8Error> {
-
-        abstract void continuationError(int err) throws Utf8Error;
-
-        private static final Validator strict = new Validator() {
-            @Override
-            void continuationError(int err) throws Utf8Error {
-                throw Utf8Error.error;
-            }
-        };
-
-        private static final Validator allowingTruncation = new Validator() {
-            @Override
-            void continuationError(int err) throws Utf8Error {
-                if (err != END_OF_STREAM) {
-                    throw Utf8Error.error;
-                }
-            }
-        };
-
-        @Override
-        public void handle1ByteCodePoint(int b1) {
-        }
-        @Override
-        public void handle2ByteCodePoint(int b1, int b2) {
-        }
-        @Override
-        public void handle3ByteCodePoint(int b1, int b2, int b3) {
-        }
-        @Override
-        public void handle4ByteCodePoint(int b1, int b2, int b3, int b4) {
-        }
-        @Override
-        public void handleContinuationError(int b1, int err) throws Utf8Error {
-            continuationError(err);
-        }
-        @Override
-        public void handleContinuationError(int b1, int b2, int err) throws Utf8Error {
-            continuationError(err);
-        }
-        @Override
-        public void handleContinuationError(int b1, int b2, int b3, int err) throws Utf8Error {
-            continuationError(err);
-        }
-        @Override
-        public void handlePrefixError(int err) throws Utf8Error {
-            throw Utf8Error.error;
-        }
-    }
 }

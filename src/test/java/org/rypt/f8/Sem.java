@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-enum Sem {
+public enum Sem {
     ASCII(0, 0x7f),
     Cont8(0x80, 0x8f),
     Cont9(0x90, 0x9f),
@@ -51,7 +51,7 @@ enum Sem {
         }
     }
 
-    static void testAllCombinations(CombinationConsumer test) {
+    public static void testAllCombinations(CombinationConsumer test) {
         combinations(5).forEach(test);
         combinations(5).parallel().forEach(test);
     }

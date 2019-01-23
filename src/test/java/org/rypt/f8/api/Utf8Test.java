@@ -1,6 +1,12 @@
-package org.rypt.f8;
+package org.rypt.f8.api;
 
+import org.junit.Assert;
 import org.junit.Test;
+import org.rypt.f8.Sem;
+import org.rypt.f8.Utf8;
+import org.rypt.f8.Utf8Handler;
+import org.rypt.f8.Utf8Statistics;
+import org.rypt.f8.Utf8StringBuilder;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -30,12 +36,12 @@ public class Utf8Test {
         Sem.testAllCombinations(sems -> {
             byte[] bytes = sems.generate();
             boolean valid = Arrays.equals(bytes, new String(bytes, UTF_8).getBytes(UTF_8));
-            assertEquals(valid, Utf8.isFullyValid(new ByteArrayInputStream(bytes)));
+            Assert.assertEquals(valid, Utf8.validity(new ByteArrayInputStream(bytes)).isFullyValid());
             Utf8Statistics stats = new Utf8Statistics();
-            Utf8.transferAndFinish(new ByteArrayInputStream(bytes), stats);
+            Utf8.transfer(new ByteArrayInputStream(bytes), stats);
             assertEquals(valid, stats.countInvalid() == 0);
             assertEquals(stats.countInvalidIgnoringTruncation() == 0,
-                    Utf8.isValidUpToTruncation(new ByteArrayInputStream(bytes)));
+                    Utf8.validity(new ByteArrayInputStream(bytes)).isValidOrTruncated());
         });
     }
 
@@ -44,7 +50,7 @@ public class Utf8Test {
         Sem.testAllCombinations(sems -> {
             byte[] bytes = sems.generate();
             StringBuilder appendable = new StringBuilder();
-            Utf8.transferAndFinish(new ByteArrayInputStream(bytes), Utf8Handler.of(appendable));
+            Utf8.transfer(new ByteArrayInputStream(bytes), Utf8Handler.of(appendable));
             assertEquals(new String(bytes, UTF_8), appendable.toString());
         });
     }
@@ -80,7 +86,7 @@ public class Utf8Test {
     }
 
     public static void testIsValidAllowingTruncation(boolean expected, byte[] bytes) throws IOException {
-        assertEquals(expected, Utf8.isValidUpToTruncation(new ByteArrayInputStream(bytes)));
+        assertEquals(expected, Utf8.validity(new ByteArrayInputStream(bytes)).isValidOrTruncated());
     }
 
     private static boolean assertState(int state) {
@@ -212,18 +218,21 @@ public class Utf8Test {
         @Override
         public void handlePrefixError(int b1) {
             super.handlePrefixError(b1);
+            assertTrue(b1 >= (byte)0x80 && b1 < (byte)0xc2 || b1 > (byte)0xf4 && b1 <= (byte)0xff);
             assertByte(b1);
         }
 
         @Override
         public void handleContinuationError(int b1, int nextByte) {
             super.handleContinuationError(b1, nextByte);
+            assertTrue(b1 > (byte)0xc1 && b1 <= (byte)0xf4);
             assertByte(b1);
         }
 
         @Override
         public void handleContinuationError(int b1, int b2, int nextByte) {
             super.handleContinuationError(b1, b2, nextByte);
+            assertTrue(b1 > (byte)0xc1 && b1 <= (byte)0xf4);
             assertByte(b1);
             assertByte(b2);
         }
@@ -231,6 +240,7 @@ public class Utf8Test {
         @Override
         public void handleContinuationError(int b1, int b2, int b3, int nextByte) {
             super.handleContinuationError(b1, b2, b3, nextByte);
+            assertTrue(b1 > (byte)0xc1 && b1 <= (byte)0xf4);
             assertByte(b1);
             assertByte(b2);
             assertByte(b3);

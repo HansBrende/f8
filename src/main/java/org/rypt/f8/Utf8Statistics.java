@@ -38,7 +38,7 @@ public class Utf8Statistics extends OutputStream implements Utf8Handler<RuntimeE
     @Override
     @Deprecated
     public void write(byte[] b, int off, int len) {
-        state = Utf8.nextState(state, b, off, len, this);
+        state = Utf8.nextState(state, b, off, off + len, this);
     }
 
     /**
