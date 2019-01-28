@@ -211,7 +211,7 @@ public class Utf8 {
             }
         }
         buf.set(b);
-        return Validity.SINGLE_BYTES;
+        return Validity.ASCII;
     }
 
     /**
@@ -231,7 +231,7 @@ public class Utf8 {
                 return __.validity(b, i, to);
             }
         }
-        return Validity.SINGLE_BYTES;
+        return Validity.ASCII;
     }
 
     /**

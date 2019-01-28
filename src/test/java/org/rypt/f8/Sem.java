@@ -20,9 +20,9 @@ public enum Sem {
     f4(0xf4, 0xf4),
     fErr(0xf5, 0xff);
 
-    final int min;
-    final int max;
-    final int count;
+    public final int min;
+    public final int max;
+    public final int count;
 
     Sem(int min, int max) {
         this.min = min;
@@ -33,7 +33,7 @@ public enum Sem {
     private static final int COUNT = values().length;
     private static final Sem FIRST = values()[0];
 
-    byte generate() {
+    public byte generate() {
         return (byte)(Math.random() * count + min);
     }
 

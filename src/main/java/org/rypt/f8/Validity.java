@@ -2,12 +2,7 @@ package org.rypt.f8;
 
 public enum Validity {
 
-    SINGLE_BYTES {
-        @Override
-        public boolean isAscii() {
-            return true;
-        }
-
+    ASCII {
         @Override
         public boolean isFullyValid() {
             return true;
@@ -18,12 +13,7 @@ public enum Validity {
             return true;
         }
     },
-    MULTI_BYTES {
-        @Override
-        public boolean isAscii() {
-            return false;
-        }
-
+    UNDERFLOW_R0 {
         @Override
         public boolean isFullyValid() {
             return true;
@@ -36,11 +26,6 @@ public enum Validity {
     },
     UNDERFLOW_R1 {
         @Override
-        public boolean isAscii() {
-            return false;
-        }
-
-        @Override
         public boolean isFullyValid() {
             return false;
         }
@@ -51,11 +36,6 @@ public enum Validity {
         }
     },
     UNDERFLOW_R2 {
-        @Override
-        public boolean isAscii() {
-            return false;
-        }
-
         @Override
         public boolean isFullyValid() {
             return false;
@@ -68,11 +48,6 @@ public enum Validity {
     },
     UNDERFLOW_R3 {
         @Override
-        public boolean isAscii() {
-            return false;
-        }
-
-        @Override
         public boolean isFullyValid() {
             return false;
         }
@@ -84,11 +59,6 @@ public enum Validity {
     },
     MALFORMED {
         @Override
-        public boolean isAscii() {
-            return false;
-        }
-
-        @Override
         public boolean isFullyValid() {
             return false;
         }
@@ -98,8 +68,6 @@ public enum Validity {
             return false;
         }
     };
-
-    public abstract boolean isAscii();
 
     public abstract boolean isFullyValid();
 

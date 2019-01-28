@@ -10,6 +10,8 @@ import org.rypt.f8.Utf8StringBuilder;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -20,6 +22,19 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class Utf8Test {
+
+    @Test
+    public void testNoInstantiation() throws Exception {
+        Constructor<?> c = Utf8.class.getDeclaredConstructor();
+        c.setAccessible(true);
+        try {
+            c.newInstance();
+        } catch (InvocationTargetException e) {
+            if (e.getCause() instanceof AssertionError)
+                return;
+        }
+        fail();
+    }
 
     @Test
     public void testStates() {

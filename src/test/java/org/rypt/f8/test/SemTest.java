@@ -1,6 +1,7 @@
-package org.rypt.f8;
+package org.rypt.f8.test;
 
 import org.junit.Test;
+import org.rypt.f8.Sem;
 
 import java.util.Arrays;
 import java.util.HashSet;

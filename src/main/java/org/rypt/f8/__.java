@@ -125,7 +125,7 @@ class __ {
                 //noinspection StatementWithEmptyBody
                 while (off < to && (b1 = b[off++]) >= 0);
                 if (b1 >= 0) {
-                    return Validity.MULTI_BYTES;
+                    return Validity.UNDERFLOW_R0;
                 }
             }
             if (b1 < (byte)0xe0) {
@@ -180,6 +180,6 @@ class __ {
                 }
             }
         }
-        return Validity.MULTI_BYTES;
+        return Validity.UNDERFLOW_R0;
     }
 }
