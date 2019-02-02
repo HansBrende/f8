@@ -35,7 +35,7 @@ Add the following dependency to your pom:
 <dependency>
   <groupId>org.rypt</groupId>
   <artifactId>f8</artifactId>
-  <version>1.1-RC1</version>
+  <version>1.1</version>
 </dependency>
 ```
 
