@@ -41,4 +41,14 @@ public class JdkTest {
             assertEquals(Validity.ASCII, result);
         });
     }
+
+    @Test
+    public void testPartial() {
+        byte[] b = {0, 0, 0, 0, (byte)0xc0};
+
+        for (int from = 0; from < b.length; from++) {
+            assertEquals(Validity.ASCII, Jdk.validity(b, from, b.length - 1));
+            assertEquals(Validity.MALFORMED, Jdk.validity(b, from, b.length));
+        }
+    }
 }
