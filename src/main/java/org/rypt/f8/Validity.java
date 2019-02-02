@@ -1,76 +1,46 @@
 package org.rypt.f8;
 
+/**
+ * This class encapsulates the possible UTF-8 validities of a sequence of bytes
+ */
 public enum Validity {
 
-    ASCII {
-        @Override
-        public boolean isFullyValid() {
-            return true;
-        }
+    /**
+     * Pure ASCII
+     */
+    ASCII,
 
-        @Override
-        public boolean isValidOrTruncated() {
-            return true;
-        }
-    },
-    UNDERFLOW_R0 {
-        @Override
-        public boolean isFullyValid() {
-            return true;
-        }
+    /**
+     * Valid UTF-8 that is not necessarily truncated and that is not pure ASCII
+     */
+    UNDERFLOW_R0,
 
-        @Override
-        public boolean isValidOrTruncated() {
-            return true;
-        }
-    },
-    UNDERFLOW_R1 {
-        @Override
-        public boolean isFullyValid() {
-            return false;
-        }
+    /**
+     * Valid UTF-8 that is truncated after the first byte in a multi-byte sequence
+     */
+    UNDERFLOW_R1,
 
-        @Override
-        public boolean isValidOrTruncated() {
-            return true;
-        }
-    },
-    UNDERFLOW_R2 {
-        @Override
-        public boolean isFullyValid() {
-            return false;
-        }
+    /**
+     * Valid UTF-8 that is truncated after the second byte in a multi-byte sequence
+     */
+    UNDERFLOW_R2,
 
-        @Override
-        public boolean isValidOrTruncated() {
-            return true;
-        }
-    },
-    UNDERFLOW_R3 {
-        @Override
-        public boolean isFullyValid() {
-            return false;
-        }
+    /**
+     * Valid UTF-8 that is truncated after the third byte in a multi-byte sequence
+     */
+    UNDERFLOW_R3,
 
-        @Override
-        public boolean isValidOrTruncated() {
-            return true;
-        }
-    },
-    MALFORMED {
-        @Override
-        public boolean isFullyValid() {
-            return false;
-        }
+    /**
+     * Malformed UTF-8
+     */
+    MALFORMED;
 
-        @Override
-        public boolean isValidOrTruncated() {
-            return false;
-        }
-    };
+    public boolean isFullyValid() {
+        return ordinal() < 2;
+    }
 
-    public abstract boolean isFullyValid();
-
-    public abstract boolean isValidOrTruncated();
+    public boolean isValidOrTruncated() {
+        return this != MALFORMED;
+    }
 
 }
