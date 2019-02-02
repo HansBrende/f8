@@ -3,34 +3,26 @@ A super lightweight, lightning-fast UTF-8 state machine for Java.
 
 ## Use Cases
 
-### Check if an InputStream is 100% valid UTF-8
+### Check if an array or InputStream is 100% valid UTF-8
 
 ```java
-public static boolean isValidUtf8(InputStream is, boolean allowTruncation) throws IOException {
-    return allowTruncation ? Utf8.isValidUpToTruncation(is) : Utf8.isFullyValid(is);
-}
+boolean valid = Utf8.validity(inputStream).isFullyValid();
 ```
 
-### Print out UTF-8 statistics for an InputStream
+### Check if an array or InputStream is valid or truncated UTF-8
+```java
+boolean valid = Utf8.validity(inputStream).isValidOrTruncated();
+```
+
+### Get detailed UTF-8 statistics for an InputStream
 
 ```java
 public static void printStats(InputStream is) throws IOException {
     Utf8Statistics stats = new Utf8Statistics();
-    Utf8.transferAndFinish(is, stats);
-    System.out.println("Number of legal UTF-8 multibyte sequences: " + stats.countValid());
-    System.out.println("Number of illegal UTF-8 sequences: " + stats.countInvalid());
-    System.out.println("Number of ASCII characters: " + stats.countAscii());
-    System.out.println("Looks like UTF-8: " + stats.looksLikeUtf8());
-}
-```
-
-### Decode a UTF-8-encoded InputStream to a string
-
-```java
-public static String decodeUtf8(InputStream is) throws IOException {
-    StringBuilder sb = new StringBuilder();
-    Utf8.transferAndFinish(is, Utf8Handler.of(sb));
-    return sb.toString();
+    Utf8.transfer(is, stats);
+    System.out.println("Number of legal UTF-8 code points: " + stats.countCodePoints());
+    System.out.println("Number of errors: " + stats.countInvalid());
+    System.out.println("Is UTF-8: " + stats.looksLikeUtf8());
 }
 ```
 

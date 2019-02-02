@@ -2,7 +2,6 @@ package org.rypt.f8;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
